@@ -11,22 +11,6 @@
 					<span class="d-none d-md-inline">New folder</span>
 				</a>
 			</div>
-			{{#either cmdable shellable}}
-			<div class="btn-group me-2" role="group">
-				{{#if cmdable}}
-				<a class="btn btn-info" href="@cmd" data-bs-toggle="modal" data-bs-target="#cmd" title="Run a command" data-bs-placement="top">
-					{{octicon "terminal"}}
-					<span class="d-none d-lg-inline">Run command</span>
-				</a>
-				{{/if}}
-				{{#if shellable}}
-				<a class="btn btn-warning" href="@shell" title="Open a new shell" data-bs-placement="top">
-					{{octicon "terminal"}}
-					<span class="d-none d-md-inline">Open shell</span>
-				</a>
-				{{/if}}
-			</div>
-			{{/either}}
 			<div class="btn-group me-2" role="group">
 				<a class="btn btn-success" href="@download" data-bs-toggle="modal" data-bs-target="#download" title="Download file archive" data-bs-placement="top">
 					{{octicon "file-zip"}}
