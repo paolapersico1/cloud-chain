@@ -1,20 +1,25 @@
 <nav class="navbar navbar-light bg-light">
-	<div class="container-fluid px-2>
-		<div class="d-flex">
-			<div class="btn-group me-2" role="group" style="margin-left: auto; margin-right: 0;">
-				<a class="btn btn-primary" href="@upload" data-bs-toggle="modal" data-bs-target="#upload" title="Upload a file" data-bs-placement="top" style="margin-right: 10px;">
-					{{octicon "cloud-upload"}}
-					<span class="d-none d-sm-inline">Upload</span>
-				</a>
-				<a class="btn btn-danger" href="@delete" data-bs-toggle="modal" data-bs-target="#delete" title="Delete selected files" data-bs-placement="top" style="margin-right: 10px;">
-					{{octicon "trashcan"}}
-					<span class="d-none d-md-inline">Delete</span>
-				</a>
-				<a class="btn btn-warning" href="./" title="Refresh list" data-bs-placement="top" style="margin-right: 10px;">
-					{{octicon "sync"}}
-					<span class="d-none d-lg-inline">Refresh</span>
-				</a>
-			</div>
+	<div class="btn-toolbar mb-3" role="toolbar" aria-label="Toolbar with button groups" style="margin-left: auto; margin-right: 0;">
+		<div class="btn-group me-2" role="group" style="margin-right:0;">
+			<a class="btn btn-primary" href="@upload" data-bs-toggle="modal" data-bs-target="#upload" title="Upload a file" data-bs-placement="top" style="margin-right: 10px;">
+				{{octicon "cloud-upload"}}
+				<span class="d-none d-sm-inline">Upload</span>
+			</a>
+			<a class="btn btn-danger" href="@delete" data-bs-toggle="modal" data-bs-target="#delete" title="Delete selected files" data-bs-placement="top" style="margin-right: 10px;">
+				{{octicon "trashcan"}}
+				<span class="d-none d-sm-inline">Delete</span>
+			</a>
+			<a class="btn btn-warning" href="./" title="Refresh list" data-bs-placement="top">
+				{{octicon "sync"}}
+				<span class="d-none d-sm-inline">Refresh</span>
+			</a>
 		</div>
+		<div class="input-group" style="margin-right: 10px;">
+		    <input class="form-control" type="search" placeholder="File name" aria-label="Search">
+	      	<a class="btn btn-success" type="submit">
+	      		{{octicon "search"}}
+	      		<span class="d-none d-sm-inline">Search</span>
+	      	</a>
+		</div>	
 	</div>
 </nav>
