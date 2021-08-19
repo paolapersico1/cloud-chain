@@ -168,9 +168,8 @@ app.all("/*", (req, res, next) => {
 });
 
 app.post('/*@search', function(req, res){  
-    res.filename = req.body.mytext; //mytext is the name of your input box 
-    console.log(res.filename);
-    res.send('Your Text:' +res.filename);  
+    res.filename = req.body.myfilename; 
+    res.redirect(res.filename); 
 }); 
 
 
