@@ -191,47 +191,51 @@ app.post("/*@upload", (req, res) => {
 	});
 	req.busboy.on("finish", () => {
 		if (!buff || !saveas) {
-			return res.status(400).end();
-		}
-		let fileExists = new Promise((resolve, reject) => {
-			// check if file exists
-			fs.stat(relative(res.filename, saveas), (err, stats) => {
-				if (err) {
-					return reject(err);
-				}
-				return resolve(stats);
-			});
-		});
-
-		fileExists.then((stats) => {
-			console.warn("file exists, cannot overwrite");
-			req.flash("error", "File exists, cannot overwrite. ");
+			req.flash("error", "File is not valid");
 			res.redirect("back");
-		}).catch((err) => {
-			const saveName = relative(res.filename, saveas);
-			console.log("saving file to " + saveName);
-			let save = fs.createWriteStream(saveName);
-			save.on("close", () => {
-				if (res.headersSent) {
-					return;
-				}
-				if (buff.length === 0) {
-					req.flash("success", "File saved. Warning: empty file.");
-				}
-				else {
-					buff = null;
-					req.flash("success", "File saved. ");
-				}
-				res.redirect("back");
+		}
+		else{
+			let fileExists = new Promise((resolve, reject) => {
+				// check if file exists
+				fs.stat(relative(res.filename, saveas), (err, stats) => {
+					if (err) {
+						return reject(err);
+					}
+					return resolve(stats);
+				});
 			});
-			save.on("error", (err) => {
-				console.warn(err);
-				req.flash("error", err.toString());
+
+			fileExists.then((stats) => {
+				console.warn("file exists, cannot overwrite");
+				req.flash("error", "File exists, cannot overwrite. ");
 				res.redirect("back");
+			}).catch((err) => {
+				const saveName = relative(res.filename, saveas);
+				console.log("saving file to " + saveName);
+				let save = fs.createWriteStream(saveName);
+				save.on("close", () => {
+					if (res.headersSent) {
+						return;
+					}
+					if (buff.length === 0) {
+						req.flash("success", "File saved. Warning: empty file.");
+					}
+					else {
+						buff = null;
+						req.flash("success", "File saved. ");
+					}
+					res.redirect("back");
+				});
+				save.on("error", (err) => {
+					console.warn(err);
+					req.flash("error", err.toString());
+					res.redirect("back");
+				});
+				save.write(buff);
+				save.end();
 			});
-			save.write(buff);
-			save.end();
-		});
+		}
+		
 	});
 	req.pipe(req.busboy);
 });
