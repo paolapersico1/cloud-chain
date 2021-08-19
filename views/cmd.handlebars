@@ -1,0 +1,41 @@
+{{> navbar}}
+
+<div style="padding-top: 56px; padding-bottom: 56px;">
+<main class="container my-4">
+	{{#each errors as |error|}}
+		<div class="alert alert-danger" role="alert">
+			{{error}}
+		</div>
+	{{/each}}
+	{{#each successes as |success|}}
+		<div class="alert alert-success" role="alert">
+			{{success}}
+		</div>
+	{{/each}}
+	<h4>command</h4>
+	<h4 class="cmd"><code>{{cmd}}</code></h4>
+	<h4>stdout</h4>
+	<pre><code>{{stdout}}</code></pre>
+	<h4>stderr</h4>
+	<pre><code>{{stderr}}</code></pre>
+</main>
+</div>
+
+<nav class="navbar navbar-light bg-light fixed-bottom">
+	<div class="container-fluid px-2">
+		<div class="d-flex">
+			<div class="btn-group me-2" role="group">
+				<a class="btn btn-secondary" href="/{{path}}">
+					{{octicon "chevron-left"}}
+					<span class="d-none d-sm-inline">Back</span>
+				</a>
+				<a class="btn btn-info" href="@cmd" data-bs-toggle="modal" data-bs-target="#cmd" title="Run another command" data-bs-placement="top">
+					{{octicon "terminal"}}
+					<span class="d-none d-sm-inline">Run command</span>
+				</a>
+			</div>
+		</div>
+	</div>
+</nav>
+
+{{> dialogue-cmd}}

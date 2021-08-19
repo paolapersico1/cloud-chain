@@ -1,0 +1,19 @@
+<form action="@cmd" method="post">
+	<div id="cmd" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header bg-light">
+					<h5 class="modal-title">Run command</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<input class="form-control" name="cmd" type="text" id="cmd-cmd" placeholder="g++ sort.c" required />
+				</div>
+				<div class="modal-footer bg-light">
+					<button type="reset" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-primary">Run</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</form>
