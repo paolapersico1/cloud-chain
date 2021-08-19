@@ -14,12 +14,12 @@
 				<span class="d-none d-sm-inline">Refresh</span>
 			</a>
 		</div>
-		<div class="input-group" style="margin-right: 10px;">
-		    <input class="form-control" type="search" placeholder="File name" aria-label="Search">
-	      	<a class="btn btn-success" type="submit">
-	      		{{octicon "search"}}
+		<form action="@search" method="POST" class="input-group" style="margin-right: 10px;"> 
+		    <input class="form-control" placeholder="File name" type="text" name="mytext" required /> 
+		    <button class="btn btn-success" type="submit"> 
+		    	{{octicon "search"}}
 	      		<span class="d-none d-sm-inline">Search</span>
-	      	</a>
-		</div>	
+	      	</button>
+		</form> 
 	</div>
 </nav>
