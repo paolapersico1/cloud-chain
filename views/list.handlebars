@@ -1,8 +1,10 @@
 {{> navbar path=path}}
+<div style="padding-bottom: 56px;"> </div>
+{{> toolbar shellable=shellable cmdable=cmdable}}
 
-<div style="padding-top: 56px; padding-bottom: 56px;">
+<div style="padding-top: auto; padding-bottom: 56px;">
 	<main class="container my-4">
-		<div class="row justify-content-center">
+		<div class="row justify-content-right">
 			<div class="col col-lg-10 col-xl-8 col-xxl-8">
 				{{#each errors as |error|}}
 					<div class="alert alert-danger" role="alert">
@@ -49,8 +51,6 @@
 		</div>
 	</main>
 </div>
-
-{{> toolbar shellable=shellable cmdable=cmdable}}
 
 {{> dialogue-upload}}
 {{> dialogue-mkdir}}
