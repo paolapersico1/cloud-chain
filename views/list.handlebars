@@ -5,7 +5,7 @@
 <div style="padding-top: auto; padding-bottom: 56px;">
 	<main class="container my-4">
 		<div class="row justify-content-right">
-			<div class="col col-lg-10 col-xl-8 col-xxl-8">
+			<div>
 				{{#each errors as |error|}}
 					<div class="alert alert-danger" role="alert">
 						{{error}}
@@ -16,28 +16,44 @@
 						{{success}}
 					</div>
 				{{/each}}
+				{{#if files}}
 				<ul class="list-group">
+					<li class="list-group-item">
+						<label class="stretched-invisible-label">
+							<div class="form-check">
+								<div></div>
+								<div class="form-check-label row">
+								<div class="fw-bold col-md-2">Name</div>
+								<div class="fw-bold col-md-2">Size</div>
+								<div class="fw-bold col-md-2">Date added</div>
+								<div class="fw-bold col-md-6">Digest</div>
+							</div>
+						</label>
+					</li>
+				{{/if}}	
 				{{#each files}}
 					<li class="list-group-item">
 						<label for="check{{@index}}" class="stretched-invisible-label">
 							<div class="form-check">
 								<input type="checkbox" class="form-check-input multi-select" data-select="{{name}}" data-select-size="{{size}}" data-select-type="{{#if isdirectory}}directory{{else}}file{{/if}}" id="check{{@index}}">
-								<span class="form-check-label d-flex align-items-start justify-content-between">
+								<div class="form-check-label row">
 									{{#if isdirectory}}
-										<a href="./{{name}}/" class="name">{{name}}/</a>
+										<a href="./{{name}}/" class="name col-md-2">{{name}}/</a>
+										<div class="col-md-2">-</div>
+										<div class="col-md-2">-</div>
+										<div class="col-md-6">-</div>
 									{{else}}
 									{{#if error}}
-										<a href="./{{name}}/" class="name" title="{{error}}">{{name}}/</a>
-										<span class="badge rounded-pill bg-danger badge-alignment">err</span>
+										<a href="./{{name}}/" class="name col-md-3" title="{{error}}">{{name}}/</a>
+										<span class="badge rounded-pill bg-danger badge-alignment col-md-9">err</span>
 									{{else}}
-										<a href="./{{name}}" class="name">{{name}}</a>
-										<span class="badge rounded-pill bg-secondary badge-alignment">{{filesize size}}</span>
+										<a href="./{{name}}" class="name col-md-2">{{name}}</a>
+										<div class="col-md-2">{{filesize size}}</div>
+										<div class="col-md-2">{{dateadded}}</div>
+										<div class="col-md-6">{{digest}}</div>
 									{{/if}}
 									{{/if}}
-								</span>
-								{{#if issmallimage}}
-								<img src="./{{name}}" class="mt-2" style="max-height: 6em; max-width: 100%;">
-								{{/if}}
+								</div>
 							</div>
 						</label>
 					</li>

@@ -24,6 +24,8 @@ const path = require("path");
 const filesize = require("filesize");
 const octicons = require("octicons");
 const handlebars = require("handlebars");
+var dateFormat = require('dateformat');
+const crypto = require('crypto');
 
 let app = express();
 let http = app.listen(process.env.PORT || 3000);
@@ -489,6 +491,27 @@ function isimage(f) {
 	return false;
 }
 
+function fileHash(filepath, algorithm = 'sha256') {
+    return new Promise((resolve, reject) => {
+    // Algorithm depends on availability of OpenSSL on platform
+    // Another algorithms: 'sha1', 'md5', 'sha256', 'sha512' ...
+    let shasum = crypto.createHash(algorithm);
+    try {
+      let s = fs.ReadStream(filepath)
+      s.on('data', function (data) {
+        shasum.update(data)
+      })
+      // making digest
+      s.on('end', function () {
+        const hash = shasum.digest('hex')
+        return resolve(hash);
+      })
+    } catch (error) {
+      return reject('calc fail');
+    }
+  });
+}
+
 app.get("/*", (req, res) => {
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
@@ -515,20 +538,23 @@ app.get("/*", (req, res) => {
 		});
 
 		readDir.then((filenames) => {
-			const promises = filenames.map(f => new Promise((resolve, reject) => {
-				fs.stat(relative(res.filename, f), (err, stats) => {
-					if (err) {
-						console.warn(err);
-						return resolve({
+			const promises = filenames.map(f => fileHash(path.join(__dirname, req.url, f)).then((hash) => { 
+				return new Promise((resolve, reject) => {
+					fs.stat(relative(res.filename, f), (err, stats) => {
+						if (err) {
+							console.warn(err);
+							return resolve({
+								name: f,
+								error: err
+							});
+						}
+						resolve({
 							name: f,
-							error: err
+							isdirectory: stats.isDirectory(),
+							size: stats.size,
+							dateadded: dateFormat(stats.birthtime, "yyyy-mm-dd h:MM:ss"),
+							digest : hash
 						});
-					}
-					resolve({
-						name: f,
-						isdirectory: stats.isDirectory(),
-						issmallimage: isimage(f) && stats.size < SMALL_IMAGE_MAX_SIZE,
-						size: stats.size
 					});
 				});
 			}));

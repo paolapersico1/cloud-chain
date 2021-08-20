@@ -21,6 +21,7 @@
     "bootstrap": "^5.1.0",
     "connect-busboy": "0.0.2",
     "connect-flash": "^0.1.1",
+    "dateformat": "^4.5.1",
     "express": "^4.17.1",
     "express-handlebars": "^5.3.3",
     "express-session": "^1.17.2",
