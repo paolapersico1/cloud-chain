@@ -13,6 +13,26 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "lite-server": "^2.3.0"
+    "lite-server": "^2.6.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.0",
+    "archiver": "^5.3.0",
+    "bootstrap": "^5.1.0",
+    "connect-busboy": "0.0.2",
+    "connect-flash": "^0.1.1",
+    "express": "^4.17.1",
+    "express-handlebars": "^5.3.3",
+    "express-session": "^1.17.2",
+    "filesize": "^8.0.0",
+    "handlebars": "^4.7.7",
+    "jquery": "^3.6.0",
+    "notp": "^2.0.3",
+    "octicons": "^8.5.0",
+    "rimraf": "^3.0.2",
+    "thirty-two": "^1.0.2",
+    "xterm": "^4.13.0",
+    "xterm-addon-attach": "^0.6.0",
+    "xterm-addon-fit": "^0.5.0"
   }
 }
