@@ -29,11 +29,12 @@ const crypto = require('crypto');
 
 let app = express();
 let http = app.listen(process.env.PORT || 3000);
+let srcdir =  path.join(__dirname, "src");
 
-app.set("views", path.join(__dirname, "views"));
+app.set("views", path.join(srcdir, "views"));
 app.engine("handlebars", hbs({
-	partialsDir: path.join(__dirname, "views", "partials"),
-	layoutsDir: path.join(__dirname, "views", "layouts"),
+	partialsDir: path.join(srcdir, "views", "partials"),
+	layoutsDir: path.join(srcdir, "views", "layouts"),
 	defaultLayout: "main",
 	helpers: {
 		either: function(a, b, options) {
@@ -69,7 +70,7 @@ app.engine("handlebars", hbs({
 }));
 app.set("view engine", "handlebars");
 
-app.use("/@assets", express.static(path.join(__dirname, "assets")));
+app.use("/@assets", express.static(path.join(srcdir, "assets")));
 app.use("/@assets/bootstrap", express.static(path.join(__dirname, "node_modules/bootstrap/dist")));
 app.use("/@assets/octicons", express.static(path.join(__dirname, "node_modules/octicons/build")));
 app.use("/@assets/jquery", express.static(path.join(__dirname, "node_modules/jquery/dist")));
@@ -492,27 +493,35 @@ function isimage(f) {
 }
 
 function fileHash(filepath, algorithm = 'sha256') {
-    return new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     // Algorithm depends on availability of OpenSSL on platform
     // Another algorithms: 'sha1', 'md5', 'sha256', 'sha512' ...
-    let shasum = crypto.createHash(algorithm);
-    try {
-      let s = fs.ReadStream(filepath)
-      s.on('data', function (data) {
-        shasum.update(data)
-      })
-      // making digest
-      s.on('end', function () {
-        const hash = shasum.digest('hex')
-        return resolve(hash);
-      })
-    } catch (error) {
-      return reject('calc fail');
+    if(fs.lstatSync(filepath).isDirectory()){
+    	return resolve('-');
+    }else{
+    	let shasum = crypto.createHash(algorithm);
+	    try {
+	      let s = fs.ReadStream(filepath)
+	      s.on('data', function (data) {
+	        shasum.update(data)
+	      })
+	      // making digest
+	      s.on('end', function () {
+	        const hash = shasum.digest('hex')
+	        return resolve(hash);
+	      })
+	    } catch (error) {
+	      return reject('calc fail');
+	    }
     }
   });
 }
 
-app.get("/*", (req, res) => {
+app.get("/", (req, res) => {
+	res.redirect("/storage");
+})
+
+app.get("/storage*", (req, res) => {
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
 			shellable: shellable,
