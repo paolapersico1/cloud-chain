@@ -28,11 +28,11 @@
     "express-session": "^1.17.2",
     "filesize": "^8.0.0",
     "handlebars": "^4.7.7",
-    "jquery": "^3.6.0",
     "notp": "^2.0.3",
     "octicons": "^8.5.0",
     "rimraf": "^3.0.2",
     "thirty-two": "^1.0.2",
+    "truffle": "^5.4.6",
     "xterm": "^4.13.0",
     "xterm-addon-attach": "^0.6.0",
     "xterm-addon-fit": "^0.5.0"

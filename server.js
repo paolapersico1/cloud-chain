@@ -3,7 +3,6 @@
 /* jshint esversion: 6 */
 /* jshint node: true */
 "use strict";
-
 const express = require("express");
 const hbs = require("express-handlebars");
 const bodyparser = require("body-parser");
@@ -27,9 +26,10 @@ const handlebars = require("handlebars");
 var dateFormat = require('dateformat');
 const crypto = require('crypto');
 
+const srcdir =  path.join(__dirname, "src");
+
 let app = express();
 let http = app.listen(process.env.PORT || 3000);
-let srcdir =  path.join(__dirname, "src");
 
 app.set("views", path.join(srcdir, "views"));
 app.engine("handlebars", hbs({
@@ -73,7 +73,6 @@ app.set("view engine", "handlebars");
 app.use("/@assets", express.static(path.join(srcdir, "assets")));
 app.use("/@assets/bootstrap", express.static(path.join(__dirname, "node_modules/bootstrap/dist")));
 app.use("/@assets/octicons", express.static(path.join(__dirname, "node_modules/octicons/build")));
-app.use("/@assets/jquery", express.static(path.join(__dirname, "node_modules/jquery/dist")));
 app.use("/@assets/filesize", express.static(path.join(__dirname, "node_modules/filesize/lib")));
 app.use("/@assets/xterm", express.static(path.join(__dirname, "node_modules/xterm")));
 app.use("/@assets/xterm-addon-attach", express.static(path.join(__dirname, "node_modules/xterm-addon-attach")));
