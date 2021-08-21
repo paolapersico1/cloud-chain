@@ -1,5 +1,5 @@
-var Adoption = artifacts.require("Adoption");
+var CloudSLA = artifacts.require("CloudSLA");
 
 module.exports = function(deployer) {
-  deployer.deploy(Adoption);
+  deployer.deploy(CloudSLA);
 };
