@@ -29,7 +29,7 @@ const crypto = require('crypto');
 const srcdir =  path.join(__dirname, "src");
 
 let app = express();
-let http = app.listen(process.env.PORT || 3000);
+let http = app.listen(process.env.PORT || 3001);
 
 app.set("views", path.join(srcdir, "views"));
 app.engine("handlebars", hbs({
@@ -79,11 +79,13 @@ app.use("/@assets/xterm-addon-attach", express.static(path.join(__dirname, "node
 app.use("/@assets/xterm-addon-fit", express.static(path.join(__dirname, "node_modules/xterm-addon-fit")));
 
 app.use(session({
-	secret: process.env.SESSION_KEY || "meowmeow"
+	secret: process.env.SESSION_KEY || "meowmeow",
+	resave: false,
+	saveUninitialized: false
 }));
 app.use(flash());
 app.use(busboy());
-app.use(bodyparser.urlencoded());
+app.use(express.urlencoded({ extended: true }))
 
 // AUTH
 

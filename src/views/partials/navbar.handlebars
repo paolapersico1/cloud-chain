@@ -11,6 +11,8 @@
 				{{/eachpath}}
 			</div>
 			<div class="navbar-nav">
+				<a class="nav-item nav-link" id="account">Account: </a>
+				<a class="nav-item nav-link" id="connect" title="Connect to wallet">{{octicon "book"}}</a>
 				{{#if isloginenabled}}
 				{{#if isloggingin}}
 					<a class="nav-item nav-link" href="/@login" title="Sign in" data-bs-placement="left">
@@ -22,6 +24,7 @@
 					</a>
 				{{/if}}
 				{{/if}}
+
 			</div>
 		</div>
 	</div>
