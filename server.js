@@ -26,7 +26,7 @@ const handlebars = require("handlebars");
 var dateFormat = require('dateformat');
 const crypto = require('crypto');
 
-const srcdir =  path.join(__dirname, "src");
+const srcdir =  path.join(__dirname, "public");
 
 let app = express();
 let http = app.listen(process.env.PORT || 3001);
@@ -178,7 +178,7 @@ app.post('/*@search', function(req, res){
 
 
 app.post("/*@upload", (req, res) => {
-	res.filename = req.params[0];
+	/*res.filename = req.params[0];
 
 	let buff = null;
 	let saveas = null;
@@ -247,7 +247,7 @@ app.post("/*@upload", (req, res) => {
 		}
 		
 	});
-	req.pipe(req.busboy);
+	req.pipe(req.busboy);*/
 });
 
 app.post("/*@mkdir", (req, res) => {

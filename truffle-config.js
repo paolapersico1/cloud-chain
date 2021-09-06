@@ -1,7 +1,8 @@
-const PrivateKeyProvider = require("@truffle/hdwallet-provider");
+const PrivateKeyProvider = require("truffle-hdwallet-provider");
 
-// insert the private key of the account used in metamask eg: Account 1 (Miner Coinbase Account)
-const privateKey = "c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3";
+// insert the private key of the account used in metamask eg: Account 12
+// address 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
+const privateKey = process.env.PRIVATE_KEY || "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63";
 
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
@@ -10,12 +11,13 @@ module.exports = {
     development: {
       host: "127.0.0.1",
       port: 8545,
-      gasPrice: 0,
-      network_id: "*" // Match any network id
+      network_id: "*", // Match any network id
+      gasPrice: 0    
     },
     quickstartWallet: {
       provider: () => new PrivateKeyProvider(privateKey, "http://localhost:8545"),
-      network_id: "*"
+      network_id: "*",
+      gasPrice: 0
     }
   }
 };
