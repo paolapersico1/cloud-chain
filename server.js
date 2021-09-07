@@ -24,7 +24,11 @@ const filesize = require("filesize");
 const octicons = require("octicons");
 const handlebars = require("handlebars");
 var dateFormat = require('dateformat');
+
 const crypto = require('crypto');
+const PrivateKeyProvider = require("truffle-hdwallet-provider");
+const TruffleContract = require('@truffle/contract');
+const CloudSLAArtifact = require('./build/contracts/CloudSLA.json');
 
 const srcdir =  path.join(__dirname, "public");
 
@@ -86,6 +90,28 @@ app.use(session({
 app.use(flash());
 app.use(busboy());
 app.use(express.urlencoded({ extended: true }))
+
+//TEST SMART CONTRACT
+// insert the private key of the account used in metamask eg: Account 12
+// address 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
+const privateKey = process.env.PRIVATE_KEY || "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63";
+const provider = new PrivateKeyProvider(privateKey, "http://localhost:8545");
+var account;
+
+var CloudSLA = TruffleContract(CloudSLAArtifact);
+CloudSLA.setProvider(provider);
+var cloudslaInstance;
+console.log(provider.getAddress());
+
+CloudSLA.deployed().then(function(instance) {
+  cloudslaInstance = instance;
+ return cloudslaInstance.SetUser('0x627306090abaB3A6e1400e9345bC60c78a8BEf57', {from: provider.getAddress()});
+}).then(function(result) {
+  console.log(result);
+}).catch(function(err) {
+  console.log(err.message);
+});
+
 
 // AUTH
 
@@ -178,6 +204,17 @@ app.post('/*@search', function(req, res){
 
 
 app.post("/*@upload", (req, res) => {
+	/*var cloudslaInstance;
+  App.contracts.CloudSLA.deployed().then(function(instance) {
+    cloudslaInstance = instance;
+    return cloudslaInstance.UploadRequest(filepath, {from: App.account});
+  }).then(function(result) {
+    console.log(result);
+  }).catch(function(err) {
+    console.log(err.message);
+  });*/
+
+
 	/*res.filename = req.params[0];
 
 	let buff = null;
@@ -518,11 +555,12 @@ function fileHash(filepath, algorithm = 'sha256') {
   });
 }
 
+
 app.get("/", (req, res) => {
 	res.redirect("/storage");
 })
 
-app.get("/storage*", (req, res) => {
+app.get("/*", (req, res) => {
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
 			shellable: shellable,

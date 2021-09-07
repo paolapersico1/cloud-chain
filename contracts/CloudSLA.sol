@@ -1,4 +1,5 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 /**
@@ -15,11 +16,14 @@ contract CloudSLA {
         uint violationCount;
         uint monitoringPeriod;
     }*/
+    
+    enum State {defaultValue, uploadRequested, uploadRequestAck, uploadTransferAck, uploaded, 
+                deleteRequested, deleted, readRequested, readRequestAck, readDeny }
 
     struct File {
         bytes32 ID;         //hash of filepath
         bool onCloud;
-        string[] states;   
+        State[] states;   
         bytes32[] digests;     //hash of last content
         string url;         //hash of last url
     }
@@ -27,39 +31,36 @@ contract CloudSLA {
     //Sla private sla;
     mapping ( bytes32 => File ) private files;
     
-    function EqualStrings(string memory a, string memory b) private pure returns (bool) {
-        return (Hash(a) == Hash(b));
-    }
     
     function Hash(string memory str) private pure returns(bytes32){
         return (sha256(abi.encodePacked(str)));
     }
     
-    modifier OnlyUser {require (msg.sender == user); _;}
-    modifier OnlyCloud {require (msg.sender == cloud); _;}
+    modifier OnlyUser {require (msg.sender == user, "OnlyUser"); _;}
+    modifier OnlyCloud {require (msg.sender == cloud, "OnlyCloud"); _;}
     modifier FileInBC (string memory filepath) {
         bytes32 i = Hash(filepath);
-        require (i != 0x0 && files[i].ID != 0x0);
+        require (i != 0x0 && files[i].ID != 0x0, "FileInBC");
         _;
     }
     modifier FileOnCloud (string memory filepath, bool onCloud) {
         bytes32 i = Hash(filepath);
         bool inBC = files[i].ID != 0x0;
         if (onCloud)
-            require (i != 0x0 && inBC && files[i].onCloud);
+            require (i != 0x0 && inBC && files[i].onCloud, "FileOnCloud");
         else
-            require (! inBC ||  ! files[i].onCloud);
+            require (! inBC ||  ! files[i].onCloud, "FileNotOnCloud");
         _;
     }
-    modifier FileState (string memory filepath, string memory prevState) {
+    modifier FileState (string memory filepath, State prevState) {
         bytes32 i = Hash(filepath);
         bool inBC = files[i].ID != 0x0;
-        string memory lastState = files[i].states[files[i].states.length - 1];
-        require (i != 0x0 && inBC && EqualStrings(lastState, prevState));
+        State lastState = files[i].states[files[i].states.length - 1];
+        require (i != 0x0 && inBC && lastState == prevState, "FileState");
         _;
     }
 
-    constructor() public {
+    constructor() {
         cloud = msg.sender;
     }
     
@@ -70,78 +71,77 @@ contract CloudSLA {
     function UploadRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, false){
         bytes32 i = Hash(filepath);
         files[i].ID = i;
-        files[i].states.push("uploadRequested");
+        files[i].states.push(State.uploadRequested);
     }
     
-    function UploadRequestAck(string calldata filepath) external OnlyCloud FileState(filepath, "uploadRequested"){
+    function UploadRequestAck(string calldata filepath) external OnlyCloud FileState(filepath, State.uploadRequested){
         bytes32 i = Hash(filepath);
-        files[i].states.push("uploadRequestAck");
+        files[i].states.push(State.uploadRequestAck);
     }
     
-    function UploadTransferAck(string calldata filepath, bytes32 digest) external OnlyCloud FileState(filepath, "uploadRequestAck"){
+    function UploadTransferAck(string calldata filepath, bytes32 digest) external OnlyCloud FileState(filepath, State.uploadRequestAck){
         bytes32 i = Hash(filepath);
-        files[i].states.push("uploadTransferAck");
+        files[i].states.push(State.uploadTransferAck);
         files[i].digests.push(digest);
     }
     
-    function UploadConfirm(string calldata filepath, bool ack) external OnlyUser FileState(filepath, "uploadTransferAck"){
+    function UploadConfirm(string calldata filepath, bool ack) external OnlyUser FileState(filepath, State.uploadTransferAck){
         bytes32 i = Hash(filepath);
-        bytes32 lastDigest = files[i].digests[files[i].digests.length - 1];
         if(ack){
-            files[i].states.push("uploaded"); 
+            files[i].states.push(State.uploaded); 
             files[i].onCloud = true;
         }
         else
-            files[i].states.push("deleteRequested");
+            files[i].states.push(State.deleteRequested);
     }
     
     function DeleteRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, true){
         bytes32 i = Hash(filepath);
-        files[i].states.push("deleteRequested");
+        files[i].states.push(State.deleteRequested);
     }
     
-    function Delete(string calldata filepath) external OnlyCloud FileState(filepath, "deleteRequested"){
+    function Delete(string calldata filepath) external OnlyCloud FileState(filepath, State.deleteRequested){
         bytes32 i = Hash(filepath);
-        files[i].states.push("deleted");
+        files[i].states.push(State.deleted);
         files[i].onCloud = false;
     }
     
     function ReadRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, true){
         bytes32 i = Hash(filepath);
-        files[i].states.push("readRequested");
+        files[i].states.push(State.readRequested);
     }
     
-    function ReadRequestAck(string calldata filepath, string calldata url) external OnlyCloud FileState(filepath, "readRequested"){
+    function ReadRequestAck(string calldata filepath, string calldata url) external OnlyCloud FileState(filepath, State.readRequested){
         bytes32 i = Hash(filepath);
-        files[i].states.push("readRequestAck");
+        files[i].states.push(State.readRequestAck);
         files[i].url = url;
     }
     
-    function ReadRequestDeny(string calldata filepath) external OnlyCloud FileState(filepath, "readRequested"){
+    function ReadRequestDeny(string calldata filepath) external OnlyCloud FileState(filepath, State.readRequested){
         bytes32 i = Hash(filepath);
-        files[i].states.push("readDeny");
+        files[i].states.push(State.readDeny);
         LostFileCheck(i);
     }
     
     //TODO ARBITRATOR
-    function GetFile(string memory filepath) public view FileInBC(filepath) returns(bytes32, string [] memory, bool, bytes32 [] memory, string memory){
+    function GetFile(string memory filepath) public view FileInBC(filepath) returns(bytes32, State [] memory, bool, bytes32 [] memory, string memory){
         bytes32 i = Hash(filepath);
         return (files[i].ID, files[i].states, files[i].onCloud, files[i].digests, files[i].url);
     }
     
-    function LostFileCheck(bytes32 ID) internal returns(bool){
+    function LostFileCheck(bytes32 ID) internal view returns(bool){
         bool res = false;
-        if(!OperationAfterUpload(ID, "deleteRequested")){
+        if(!OperationAfterUpload(ID, State.deleteRequested)){
             //TODO Compensate();
             res = true;
         }
         return(res);    
     }
     
-    function CorruptedFileCheck(string calldata filepath) external returns(bool){
+    function CorruptedFileCheck(string calldata filepath) external view returns(bool){
         bytes32 i = Hash(filepath);
         bool res = false;
-        if(!OperationAfterUpload(i, "deleteRequested")){
+        if(!OperationAfterUpload(i, State.deleteRequested)){
             //TODO Compensate();
             res = true;
         }
@@ -160,18 +160,18 @@ contract CloudSLA {
     }*/
     
     //check if there is an operation after last upload
-    function OperationAfterUpload(bytes32 ID, string memory operation) internal view returns(bool){
+    function OperationAfterUpload(bytes32 ID, State operation) internal view returns(bool){
         //get index of last uploaded state and last deleted state if present
         uint uploadedTime;
         uint operationTime;
         bool uploadedFound = false;
         bool operationFound = false;
         for (uint j = files[ID].states.length - 1; j >= 0; j--) {
-            if(!operationFound && EqualStrings(files[ID].states[j], operation)){
+            if(!operationFound && files[ID].states[j] == operation){
                 operationTime = j;   
                 operationFound = true;
             }
-            else if(!uploadedFound && EqualStrings(files[ID].states[j], "uploaded")){
+            else if(!uploadedFound && files[ID].states[j] == State.uploaded){
                 uploadedTime= j;
                 uploadedFound = true;
             }

@@ -29,7 +29,3 @@ $file.on("change", () => {
            $form.find("#upload-file-hash").val(encrypted);
         });
 });
-
-$form.on("submit", () => {
-    //send upload request transaction
-});
