@@ -25,10 +25,12 @@ const octicons = require("octicons");
 const handlebars = require("handlebars");
 var dateFormat = require('dateformat');
 
+const Web3 = require('Web3');
 const crypto = require('crypto');
 const PrivateKeyProvider = require("truffle-hdwallet-provider");
 const TruffleContract = require('@truffle/contract');
-const CloudSLAArtifact = require('./build/contracts/CloudSLA.json');
+const truffleConfig = require(path.join(__dirname, "truffle-config.js"));
+const CloudSLAArtifact = require(path.join(__dirname, "build", "contracts", "CloudSLA.json"));
 
 const srcdir =  path.join(__dirname, "public");
 
@@ -91,27 +93,74 @@ app.use(flash());
 app.use(busboy());
 app.use(express.urlencoded({ extended: true }))
 
-//TEST SMART CONTRACT
-// insert the private key of the account used in metamask eg: Account 12
-// address 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
-const privateKey = process.env.PRIVATE_KEY || "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63";
-const provider = new PrivateKeyProvider(privateKey, "http://localhost:8545");
-var account;
+//Initialize CloudSLA interaction 
+const provider = truffleConfig.networks.quickstartWallet.provider();
+const account = provider.getAddress(); // 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
 
-var CloudSLA = TruffleContract(CloudSLAArtifact);
-CloudSLA.setProvider(provider);
+var truffleContract = TruffleContract(CloudSLAArtifact);
+truffleContract.setProvider(provider);
 var cloudslaInstance;
-console.log(provider.getAddress());
+console.log(account);
 
-CloudSLA.deployed().then(function(instance) {
+//event listening in truffle only works with events fired by own account
+//so we have to use web3
+var web3 = new Web3(provider);
+/*const getNetworkID = async function() {
+  return await web3.eth.net.getId();
+}
+const networkId = getNetworkID();
+const deployedNetwork = CloudSLAArtifact.networks[networkId];*/
+const web3Contract = new web3.eth.Contract(
+    CloudSLAArtifact.abi,
+    '0x68a185CAb9607B9BEb0B210Bf7CC320f3b3A3eFB',
+);
+web3Contract.events.UploadRequested({})
+    .on('data', async function(event){
+        console.log(event.returnValues);
+        // Do something here
+    })
+    .on('error', console.error);
+
+/*truffleContract.deployed().then(function(instance) {
   cloudslaInstance = instance;
- return cloudslaInstance.SetUser('0x627306090abaB3A6e1400e9345bC60c78a8BEf57', {from: provider.getAddress()});
-}).then(function(result) {
-  console.log(result);
+ 	//return cloudslaInstance.SetUser('0x627306090abaB3A6e1400e9345bC60c78a8BEf57', {from: account});
+ 	cloudslaInstance.events.UploadRequested({
+    fromBlock: 0
+  }).on('data', event => {
+    // Get data from event object
+    console.log(event);
+  })
 }).catch(function(err) {
   console.log(err.message);
-});
+});*/
 
+/*truffleContract.deployed().then(function(instance) {
+      cloudslaInstance = instance;
+      return cloudslaInstance.UploadRequestAck("/storage/Eula.txt", {from: account});
+    }).then(function(txReceipt) {
+      console.log(txReceipt);
+      cloudslaInstance.GetFile.call("/storage/Eula.txt").
+      then(function (uploadedFile) { 
+      console.log(describeFileTx(uploadedFile))});
+    }).catch(function(err) {
+      console.log(err.message);
+    });*/
+
+function describeFileTx(uploadedFile){
+  let description = "Hash of filepath: "  + uploadedFile[0] + 
+                    "\nStates: "   + fromEnumArrayToStringArray(uploadedFile[1]) + 
+                    "\nOnCloud: " + uploadedFile[2] + 
+                    "\nDigests: " + uploadedFile[3] + 
+                    "\nUrl: "     + uploadedFile[4];
+
+  return description;
+}
+
+function fromEnumArrayToStringArray(array){
+  let states = ["defaultValue", "uploadRequested", "uploadRequestAck", "uploadTransferAck", "uploaded", 
+                "deleteRequested", "deleted", "readRequested", "readRequestAck", "readDeny"];
+  return array.map(function (el){return states[el.words[0]];});
+}
 
 // AUTH
 

@@ -1,5 +1,20 @@
 var chunkSize = 1024*1024; // bytes
-var timeout = 10; // millisec
+var timeout = 10; // millisec 
+var counter = 0;
+
+function computeHash(file, returnFunction, cryptoJSAlgo = CryptoJS.algo.SHA256.create()){
+    loading(file,
+        function (data) {
+            var wordBuffer = CryptoJS.lib.WordArray.create(data);
+            cryptoJSAlgo.update(wordBuffer);
+            counter += data.byteLength;
+            //console.log((( this.counter / file.size)*100).toFixed(0) + '%');
+        }, function (data) {
+            //console.log('100%');
+            var encrypted = cryptoJSAlgo.finalize().toString();
+            returnFunction(encrypted);
+        });
+}
 
 function loading(file, callbackProgress, callbackFinal) {
     //var chunkSize  = 1024*1024; // bytes

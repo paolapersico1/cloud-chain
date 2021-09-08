@@ -71,37 +71,21 @@ App = {
     var filepath = window.location.pathname + file.name;
 
     var cloudslaInstance;
-
     App.contracts.CloudSLA.deployed().then(function(instance) {
       cloudslaInstance = instance;
       return cloudslaInstance.UploadRequest(filepath, {from: App.account});
-    }).then(function(result) {
-      console.log(result);
+    }).then(function(txReceipt) {
+      console.log(txReceipt);
       cloudslaInstance.GetFile.call(filepath).
       then(function (uploadedFile) { 
-      console.log(describeFile(uploadedFile))});
+      console.log(describeFileTx(uploadedFile))});
     }).catch(function(err) {
       console.log(err.message);
     });
   }
-
 };
 
-function describeFile(uploadedFile){
-  let description = "Filename: "  + uploadedFile[0] + 
-                    "\nState: "   + fromEnumArrayToStringArray(uploadedFile[1][0]['c']) + 
-                    "\nOnCloud: " + uploadedFile[2] + 
-                    "\nDigests: " + uploadedFile[3] + 
-                    "\nUrl: "     + uploadedFile[4];
 
-  return description;
-}
-
-function fromEnumArrayToStringArray(array){
-  let states = ["defaultValue", "uploadRequested", "uploadRequestAck", "uploadTransferAck", "uploaded", 
-                "deleteRequested", "deleted", "readRequested", "readRequestAck", "readDeny"]
-  return array.map(function (el){return states[el];});
-}
 
 ethereum.on('accountsChanged', (accounts) => {
   // Handle the new accounts, or lack thereof.
