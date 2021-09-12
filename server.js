@@ -96,30 +96,52 @@ app.use(express.urlencoded({ extended: true }))
 //Initialize CloudSLA interaction 
 const provider = truffleConfig.networks.quickstartWallet.provider();
 const account = provider.getAddress(); // 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
+console.log(account);
 
 var truffleContract = TruffleContract(CloudSLAArtifact);
 truffleContract.setProvider(provider);
 var cloudslaInstance;
-console.log(account);
+truffleContract.deployed().then(function(instance) {
+  cloudslaInstance = instance;
 
-//event listening in truffle only works with events fired by own account
-//so we have to use web3
-var web3 = new Web3(provider);
-/*const getNetworkID = async function() {
-  return await web3.eth.net.getId();
-}
-const networkId = getNetworkID();
-const deployedNetwork = CloudSLAArtifact.networks[networkId];*/
-const web3Contract = new web3.eth.Contract(
-    CloudSLAArtifact.abi,
-    '0x68a185CAb9607B9BEb0B210Bf7CC320f3b3A3eFB',
-);
-web3Contract.events.UploadRequested({})
+  //event listening in truffle only works with events fired by own account
+	//so we have to use web3
+	var web3 = new Web3(provider);
+	/*const getNetworkID = async function() {
+	  return await web3.eth.net.getId();
+	}
+	const networkId = getNetworkID();
+	const deployedNetwork = CloudSLAArtifact.networks[networkId];*/
+	const web3Contract = new web3.eth.Contract(
+	    CloudSLAArtifact.abi,
+	    cloudslaInstance.address,
+	);
+	web3Contract.events.UploadRequested({})
     .on('data', async function(event){
         console.log(event.returnValues);
-        // Do something here
+        var file = event.returnValues.filepath;
+        
+        return cloudslaInstance.UploadRequestAck(file, {from: account})
+        .then(function(txReceipt) {
+		      console.log(txReceipt);
+
+		      cloudslaInstance.GetFile.call(file)
+		      	.then(function (uploadedFile) { 
+			      	console.log(describeFileTx(uploadedFile));
+			      }).catch(function(err) {
+						  console.log(err.message);
+						});
+						
+		    }).catch(function(err) {
+				  console.log(err.message);
+				});
     })
-    .on('error', console.error);
+	  .on('error', console.error);
+}).catch(function(err) {
+  console.log(err.message);
+});
+
+
 
 /*truffleContract.deployed().then(function(instance) {
   cloudslaInstance = instance;
