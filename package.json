@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "restart" : "truffle migrate --reset --network quickstartWallet && nodemon server.js",
+    "restart": "truffle migrate --reset --network quickstartWallet && nodemon server.js",
     "start": "nodemon server.js",
     "dev": "lite-server",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.3.0",
-    "@truffle/contract": "^4.3.33",
+    "@truffle/contract": "^4.3.34",
     "archiver": "^5.3.0",
     "bootstrap": "^5.1.0",
     "connect-busboy": "0.0.2",

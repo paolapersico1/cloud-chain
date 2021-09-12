@@ -100,38 +100,33 @@ console.log(account);
 
 var truffleContract = TruffleContract(CloudSLAArtifact);
 truffleContract.setProvider(provider);
-var cloudslaInstance;
+var truffleContractInstance;
 truffleContract.deployed().then(function(instance) {
-  cloudslaInstance = instance;
+  truffleContractInstance = instance;
 
   //event listening in truffle only works with events fired by own account
 	//so we have to use web3
 	var web3 = new Web3(provider);
-	/*const getNetworkID = async function() {
-	  return await web3.eth.net.getId();
-	}
-	const networkId = getNetworkID();
-	const deployedNetwork = CloudSLAArtifact.networks[networkId];*/
-	const web3Contract = new web3.eth.Contract(
+	const web3ContractInstance = new web3.eth.Contract(
 	    CloudSLAArtifact.abi,
-	    cloudslaInstance.address,
+	    truffleContractInstance.address,
 	);
-	web3Contract.events.UploadRequested({})
+	web3ContractInstance.events.UploadRequested({})
     .on('data', async function(event){
         console.log(event.returnValues);
         var file = event.returnValues.filepath;
         
-        return cloudslaInstance.UploadRequestAck(file, {from: account})
+        truffleContractInstance.UploadRequestAck(file, {from: account})
         .then(function(txReceipt) {
 		      console.log(txReceipt);
 
-		      cloudslaInstance.GetFile.call(file)
+		      truffleContractInstance.GetFile.call(file)
 		      	.then(function (uploadedFile) { 
 			      	console.log(describeFileTx(uploadedFile));
 			      }).catch(function(err) {
 						  console.log(err.message);
 						});
-						
+
 		    }).catch(function(err) {
 				  console.log(err.message);
 				});
@@ -140,33 +135,6 @@ truffleContract.deployed().then(function(instance) {
 }).catch(function(err) {
   console.log(err.message);
 });
-
-
-
-/*truffleContract.deployed().then(function(instance) {
-  cloudslaInstance = instance;
- 	//return cloudslaInstance.SetUser('0x627306090abaB3A6e1400e9345bC60c78a8BEf57', {from: account});
- 	cloudslaInstance.events.UploadRequested({
-    fromBlock: 0
-  }).on('data', event => {
-    // Get data from event object
-    console.log(event);
-  })
-}).catch(function(err) {
-  console.log(err.message);
-});*/
-
-/*truffleContract.deployed().then(function(instance) {
-      cloudslaInstance = instance;
-      return cloudslaInstance.UploadRequestAck("/storage/Eula.txt", {from: account});
-    }).then(function(txReceipt) {
-      console.log(txReceipt);
-      cloudslaInstance.GetFile.call("/storage/Eula.txt").
-      then(function (uploadedFile) { 
-      console.log(describeFileTx(uploadedFile))});
-    }).catch(function(err) {
-      console.log(err.message);
-    });*/
 
 function describeFileTx(uploadedFile){
   let description = "Hash of filepath: "  + uploadedFile[0] + 
@@ -275,10 +243,10 @@ app.post('/*@search', function(req, res){
 
 
 app.post("/*@upload", (req, res) => {
-	/*var cloudslaInstance;
+	/*var truffleContractInstance;
   App.contracts.CloudSLA.deployed().then(function(instance) {
-    cloudslaInstance = instance;
-    return cloudslaInstance.UploadRequest(filepath, {from: App.account});
+    truffleContractInstance = instance;
+    return truffleContractInstance.UploadRequest(filepath, {from: App.account});
   }).then(function(result) {
     console.log(result);
   }).catch(function(err) {

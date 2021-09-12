@@ -12,6 +12,5 @@ function describeFileTx(uploadedFile){
 function fromEnumArrayToStringArray(array){
   let states = ["defaultValue", "uploadRequested", "uploadRequestAck", "uploadTransferAck", "uploaded", 
                 "deleteRequested", "deleted", "readRequested", "readRequestAck", "readDeny"];
-  return array.map(function (el){return states[el.c];}); //or s?
+  return array.map(function (el){return states[el.words[0]];});
 }
-

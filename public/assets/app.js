@@ -2,6 +2,8 @@ App = {
   web3Provider: null,
   contracts: {},
   account: null,
+  web3ContractInstance: null,
+  truffleContractInstance : null,
 
   init: async function() {
     return await App.initWeb3();
@@ -13,7 +15,7 @@ App = {
       App.web3Provider = window.ethereum;
       ethereum
         .request({ method: 'eth_requestAccounts' })
-        .then((accounts) => {
+        .then((res) => {
           console.log("Connected to MetaMask.");
         })
         .catch((error) => {
@@ -34,6 +36,9 @@ App = {
       App.web3Provider = new Web3.providers.HttpProvider('http://localhost:8545');
     }
     web3 = new Web3(App.web3Provider);
+    web3WebSocket = new Web3(new Web3.providers.WebsocketProvider("ws://localhost:8546"));
+
+    console.log(web3.version);
 
     web3.eth.getAccounts(function(error, accounts) {
       if (error) {
@@ -54,9 +59,17 @@ App = {
       App.contracts.CloudSLA = TruffleContract(CloudSLAArtifact);
       // Set the provider for our contract
       App.contracts.CloudSLA.setProvider(App.web3Provider);
+      App.contracts.CloudSLA.deployed().then(function(instance) {
+        truffleContractInstance = instance;
+        web3ContractInstance = new web3WebSocket.eth.Contract(
+            CloudSLAArtifact.abi,
+            truffleContractInstance.address,
+        );
+        return App.bindEvents();
+      }).catch(function(err) {
+        console.log(err.message);
+      });
     });
-
-    return App.bindEvents();
   },
 
   bindEvents: function() {
@@ -70,18 +83,32 @@ App = {
     const file = $("#upload-file")[0].files[0];
     var filepath = window.location.pathname + file.name;
 
-    var cloudslaInstance;
-    App.contracts.CloudSLA.deployed().then(function(instance) {
-      cloudslaInstance = instance;
-      return cloudslaInstance.UploadRequest(filepath, {from: App.account});
-    }).then(function(txReceipt) {
+    truffleContractInstance.UploadRequest(filepath, {from: App.account})
+    .then(function(txReceipt) {
       console.log(txReceipt);
-      cloudslaInstance.GetFile.call(filepath).
-      then(function (uploadedFile) { 
-      console.log(describeFileTx(uploadedFile))});
+
+      truffleContractInstance.GetFile.call(filepath)
+        .then(function (uploadedFile) { 
+          console.log(describeFileTx(uploadedFile));
+        }).catch(function(err) {
+          console.log(err.message);
+        });
     }).catch(function(err) {
       console.log(err.message);
     });
+
+    /*var event = web3ContractInstance.UploadRequestAcked({},{fromBlock:0},function(error, result){
+        // Expect to log when click 'Run accept' button
+        console.log("UploadRequestAcked", error, result);
+    });*/
+
+    web3ContractInstance.events.UploadRequestAcked({})
+      .on('data', async function(event){
+          console.log(event.returnValues);
+          //FAI UPLOAD
+          console.log("HERE");
+      })
+      .on('error', console.error);
   }
 };
 
