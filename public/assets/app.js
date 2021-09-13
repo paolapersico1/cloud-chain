@@ -38,8 +38,6 @@ App = {
     web3 = new Web3(App.web3Provider);
     web3WebSocket = new Web3(new Web3.providers.WebsocketProvider("ws://localhost:8546"));
 
-    console.log(web3.version);
-
     web3.eth.getAccounts(function(error, accounts) {
       if (error) {
         console.log(error);
@@ -74,25 +72,25 @@ App = {
 
   bindEvents: function() {
     $(document).on('click', '#connect', App.initWeb3);
-    $(document).on('submit', "form[action='@upload']", App.sendUploadRequest);
+    $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
   },
 
-  sendUploadRequest: function(event) {
-    event.preventDefault();
+  sendUploadRequest: function(e) {
+    e.preventDefault();
 
-    const file = $("#upload-file")[0].files[0];
-    var filepath = window.location.pathname + file.name;
+    const saveas = $("#upload-file-saveas").val();
+    var filepath = window.location.pathname + saveas;
 
     truffleContractInstance.UploadRequest(filepath, {from: App.account})
     .then(function(txReceipt) {
       console.log(txReceipt);
 
-      truffleContractInstance.GetFile.call(filepath)
+      /*truffleContractInstance.GetFile.call(filepath)
         .then(function (uploadedFile) { 
           console.log(describeFileTx(uploadedFile));
         }).catch(function(err) {
           console.log(err.message);
-        });
+        });*/
     }).catch(function(err) {
       console.log(err.message);
     });
@@ -103,10 +101,11 @@ App = {
     });*/
 
     web3ContractInstance.events.UploadRequestAcked({})
-      .on('data', async function(event){
-          console.log(event.returnValues);
-          //FAI UPLOAD
+      .on('data', async function(evt){
+          console.log(evt.returnValues);
           console.log("HERE");
+          //$("form[action='@upload']").unbind(); 
+          $("form[action='@upload']").submit();
       })
       .on('error', console.error);
   }

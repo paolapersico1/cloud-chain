@@ -120,12 +120,12 @@ truffleContract.deployed().then(function(instance) {
         .then(function(txReceipt) {
 		      console.log(txReceipt);
 
-		      truffleContractInstance.GetFile.call(file)
+		      /*truffleContractInstance.GetFile.call(file)
 		      	.then(function (uploadedFile) { 
 			      	console.log(describeFileTx(uploadedFile));
 			      }).catch(function(err) {
 						  console.log(err.message);
-						});
+						});*/
 
 		    }).catch(function(err) {
 				  console.log(err.message);
@@ -243,18 +243,7 @@ app.post('/*@search', function(req, res){
 
 
 app.post("/*@upload", (req, res) => {
-	/*var truffleContractInstance;
-  App.contracts.CloudSLA.deployed().then(function(instance) {
-    truffleContractInstance = instance;
-    return truffleContractInstance.UploadRequest(filepath, {from: App.account});
-  }).then(function(result) {
-    console.log(result);
-  }).catch(function(err) {
-    console.log(err.message);
-  });*/
-
-
-	/*res.filename = req.params[0];
+	res.filename = req.params[0];
 
 	let buff = null;
 	let saveas = null;
@@ -300,11 +289,18 @@ app.post("/*@upload", (req, res) => {
 				console.log("saving file to " + saveName);
 				let save = fs.createWriteStream(saveName);
 				save.on("close", () => {
+					//TODO invia transferdigest
+					/*fileHash(path.join(__dirname, req.url, f))
+						.then(function(hash){
+							console.log(hash);
+						})
+						.catch(function(error){console.log(error);});*/
 					if (res.headersSent) {
 						return;
 					}
 					if (buff.length === 0) {
 						req.flash("success", "File saved. Warning: empty file.");
+						
 					}
 					else {
 						buff = null;
@@ -323,7 +319,7 @@ app.post("/*@upload", (req, res) => {
 		}
 		
 	});
-	req.pipe(req.busboy);*/
+	req.pipe(req.busboy);
 });
 
 app.post("/*@mkdir", (req, res) => {

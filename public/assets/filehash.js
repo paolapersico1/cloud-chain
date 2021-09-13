@@ -55,7 +55,7 @@ var chunkTotal = 0;
 // time reordering
 function callbackRead_waiting(reader, file, evt, callbackProgress, callbackFinal){
     if(lastOffset === reader.offset) {
-        console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,"");
+        //console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,"");
         lastOffset = reader.offset+reader.size;
         callbackProgress(evt.target.result);
         if ( reader.offset + reader.size >= file.size ){
@@ -64,7 +64,7 @@ function callbackRead_waiting(reader, file, evt, callbackProgress, callbackFinal
         }
         chunkTotal++;
     } else {
-        console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,"wait");
+        //console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,"wait");
         setTimeout(function () {
             callbackRead_waiting(reader,file,evt, callbackProgress, callbackFinal);
         }, timeout);
@@ -78,7 +78,7 @@ function callbackRead_buffered(reader, file, evt, callbackProgress, callbackFina
 
     if(lastOffset !== reader.offset){
         // out of order
-        console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,">>buffer");
+        //console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,">>buffer");
         previous.push({ offset: reader.offset, size: reader.size, result: reader.result});
         chunkReorder++;
         return;
@@ -94,7 +94,7 @@ function callbackRead_buffered(reader, file, evt, callbackProgress, callbackFina
     }
 
     // in order
-    console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,"");
+    //console.log("[",reader.size,"]",reader.offset,'->', reader.offset+reader.size,"");
     parseResult(reader.offset, reader.size, reader.result);
 
     // resolve previous buffered
@@ -104,7 +104,7 @@ function callbackRead_buffered(reader, file, evt, callbackProgress, callbackFina
             return item.offset === lastOffset;
         });
         buffered.forEach(function (item) {
-            console.log("[", item.size, "]", item.offset, '->', item.offset + item.size, "<<buffer");
+            //console.log("[", item.size, "]", item.offset, '->', item.offset + item.size, "<<buffer");
             parseResult(item.offset, item.size, item.result);
             previous.remove(item);
         })
