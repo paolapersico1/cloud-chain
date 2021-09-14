@@ -79,7 +79,7 @@ App = {
     e.preventDefault();
 
     const saveas = $("#upload-file-saveas").val();
-    var filepath = window.location.pathname + saveas;
+    var filepath = "storage/" + saveas;
 
     truffleContractInstance.UploadRequest(filepath, {from: App.account})
     .then(function(txReceipt) {
@@ -95,16 +95,9 @@ App = {
       console.log(err.message);
     });
 
-    /*var event = web3ContractInstance.UploadRequestAcked({},{fromBlock:0},function(error, result){
-        // Expect to log when click 'Run accept' button
-        console.log("UploadRequestAcked", error, result);
-    });*/
-
     web3ContractInstance.events.UploadRequestAcked({})
       .on('data', async function(evt){
           console.log(evt.returnValues);
-          console.log("HERE");
-          //$("form[action='@upload']").unbind(); 
           $("form[action='@upload']").submit();
       })
       .on('error', console.error);

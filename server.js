@@ -31,6 +31,7 @@ const PrivateKeyProvider = require("truffle-hdwallet-provider");
 const TruffleContract = require('@truffle/contract');
 const truffleConfig = require(path.join(__dirname, "truffle-config.js"));
 const CloudSLAArtifact = require(path.join(__dirname, "build", "contracts", "CloudSLA.json"));
+const utils = require(path.join(__dirname, "public", "assets", "utils"));
 
 const srcdir =  path.join(__dirname, "public");
 
@@ -122,7 +123,7 @@ truffleContract.deployed().then(function(instance) {
 
 		      /*truffleContractInstance.GetFile.call(file)
 		      	.then(function (uploadedFile) { 
-			      	console.log(describeFileTx(uploadedFile));
+			      	console.log(utils.describeFileTx(uploadedFile));
 			      }).catch(function(err) {
 						  console.log(err.message);
 						});*/
@@ -135,22 +136,6 @@ truffleContract.deployed().then(function(instance) {
 }).catch(function(err) {
   console.log(err.message);
 });
-
-function describeFileTx(uploadedFile){
-  let description = "Hash of filepath: "  + uploadedFile[0] + 
-                    "\nStates: "   + fromEnumArrayToStringArray(uploadedFile[1]) + 
-                    "\nOnCloud: " + uploadedFile[2] + 
-                    "\nDigests: " + uploadedFile[3] + 
-                    "\nUrl: "     + uploadedFile[4];
-
-  return description;
-}
-
-function fromEnumArrayToStringArray(array){
-  let states = ["defaultValue", "uploadRequested", "uploadRequestAck", "uploadTransferAck", "uploaded", 
-                "deleteRequested", "deleted", "readRequested", "readRequestAck", "readDeny"];
-  return array.map(function (el){return states[el.words[0]];});
-}
 
 // AUTH
 
@@ -290,11 +275,17 @@ app.post("/*@upload", (req, res) => {
 				let save = fs.createWriteStream(saveName);
 				save.on("close", () => {
 					//TODO invia transferdigest
-					/*fileHash(path.join(__dirname, req.url, f))
+					fileHash(saveName)
 						.then(function(hash){
-							console.log(hash);
+							let filepath = "storage/" + saveas;
+							truffleContractInstance.UploadTransferAck(filepath, hash, {from: account})
+				        .then(function(txReceipt) {
+						      console.log(txReceipt);
+						    }).catch(function(err) {
+								  console.log(err.message);
+								});
 						})
-						.catch(function(error){console.log(error);});*/
+						.catch(function(error){console.log(error);});
 					if (res.headersSent) {
 						return;
 					}
@@ -581,7 +572,7 @@ function fileHash(filepath, algorithm = 'sha256') {
 	      // making digest
 	      s.on('end', function () {
 	        const hash = shasum.digest('hex')
-	        return resolve(hash);
+	        return resolve("0x" + hash);
 	      })
 	    } catch (error) {
 	      return reject('calc fail');

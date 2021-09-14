@@ -14,5 +14,6 @@ $file.on("change", () => {
 
 	$form.find("#upload-file-size").val(filesize(file.size));
 	$(".upload-unhide").fadeIn();
-    computeHash(file, function(hash){ $form.find("#upload-file-hash").val(hash);});
+	if(file)
+    	computeHash(file, function(hash){ $form.find("#upload-file-hash").val("0x" + hash);});
 });
