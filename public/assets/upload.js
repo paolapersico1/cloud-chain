@@ -16,4 +16,5 @@ $file.on("change", () => {
 	$(".upload-unhide").fadeIn();
 	if(file)
     	computeHash(file, function(hash){ $form.find("#upload-file-hash").val("0x" + hash);});
+    $form.find("#upload-file-saveas").val(file.name);
 });

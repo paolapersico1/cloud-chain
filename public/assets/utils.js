@@ -17,4 +17,4 @@ function fromEnumArrayToStringArray(array){
     return description;
   };
 
-}(typeof exports === 'undefined' ? this.share = {} : exports));
+}(typeof exports === 'undefined' ? this.utils = {} : exports));

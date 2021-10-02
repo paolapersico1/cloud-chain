@@ -97,7 +97,7 @@ app.use(express.urlencoded({ extended: true }))
 //Initialize CloudSLA interaction 
 const provider = truffleConfig.networks.quickstartWallet.provider();
 const account = provider.getAddress(); // 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
-console.log(account);
+console.log("Cloud address: " + account);
 
 var truffleContract = TruffleContract(CloudSLAArtifact);
 truffleContract.setProvider(provider);
@@ -115,10 +115,11 @@ truffleContract.deployed().then(function(instance) {
 	web3ContractInstance.events.UploadRequested({})
     .on('data', async function(event){
         console.log(event.returnValues);
-        var file = event.returnValues.filepath;
+        let file = event.returnValues.filepath;
         
         truffleContractInstance.UploadRequestAck(file, {from: account})
         .then(function(txReceipt) {
+        	console.log("--UploadRequestAck--");
 		      console.log(txReceipt);
 
 		      /*truffleContractInstance.GetFile.call(file)
@@ -274,12 +275,12 @@ app.post("/*@upload", (req, res) => {
 				console.log("saving file to " + saveName);
 				let save = fs.createWriteStream(saveName);
 				save.on("close", () => {
-					//TODO invia transferdigest
 					fileHash(saveName)
 						.then(function(hash){
 							let filepath = "storage/" + saveas;
 							truffleContractInstance.UploadTransferAck(filepath, hash, {from: account})
 				        .then(function(txReceipt) {
+				        	console.log("--UploadTransferAck--");
 						      console.log(txReceipt);
 						    }).catch(function(err) {
 								  console.log(err.message);
@@ -290,12 +291,12 @@ app.post("/*@upload", (req, res) => {
 						return;
 					}
 					if (buff.length === 0) {
-						req.flash("success", "File saved. Warning: empty file.");
+						req.flash("success", "Upload successful. Warning: empty file.");
 						
 					}
 					else {
 						buff = null;
-						req.flash("success", "File saved. ");
+						req.flash("success", "Upload successful.");
 					}
 					res.redirect("back");
 				});

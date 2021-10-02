@@ -63,15 +63,42 @@ App = {
             CloudSLAArtifact.abi,
             truffleContractInstance.address,
         );
-        return App.bindEvents();
+        return App.listenEvents();
       }).catch(function(err) {
         console.log(err.message);
       });
     });
   },
 
+  listenEvents: function() {
+    web3ContractInstance.events.UploadRequestAcked({})
+      .on('data', async function(evt){
+          console.log(evt.returnValues);
+          $("form[action='@upload']").submit();
+      })
+      .on('error', console.error);
+
+    web3ContractInstance.events.UploadTransferAcked({})
+      .on('data', async function(evt){
+          console.log(evt.returnValues);
+          //TODO check if digest is correct
+          let cloudDigest = evt.returnValues.digest;
+          let file = evt.returnValues.filepath;
+
+          $(".alert-success").append("<br>Uploaded file: '<span id='uploaded-filepath'>" + file + 
+                                                          "</span>', digest: " + cloudDigest);
+          $(".alert-success").append("<br>Accept upload? ");
+          $(".alert-success").append("<button class='upload-confirm' value='yes'>Yes</button>" +
+                                     "<button class='upload-confirm' value='no'>No</button>");
+      })
+      .on('error', console.error);
+
+    return App.bindEvents();
+  },
+
   bindEvents: function() {
     $(document).on('click', '#connect', App.initWeb3);
+    $(document).on('click', '.upload-confirm', App.sendUploadConfirm);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
   },
 
@@ -83,27 +110,40 @@ App = {
 
     truffleContractInstance.UploadRequest(filepath, {from: App.account})
     .then(function(txReceipt) {
+      console.log("--UploadRequest--");
       console.log(txReceipt);
-
-      /*truffleContractInstance.GetFile.call(filepath)
-        .then(function (uploadedFile) { 
-          console.log(describeFileTx(uploadedFile));
-        }).catch(function(err) {
-          console.log(err.message);
-        });*/
     }).catch(function(err) {
       console.log(err.message);
     });
+  },
 
-    web3ContractInstance.events.UploadRequestAcked({})
-      .on('data', async function(evt){
-          console.log(evt.returnValues);
-          $("form[action='@upload']").submit();
+  sendUploadConfirm: function(e){
+    let file = $("#uploaded-filepath").text();
+    let value = $(".upload-confirm").val();
+    let ack = null;
+    if(value == "yes"){
+      ack = true;
+    }else if (value == "no"){
+      ack = false;
+    }
+    truffleContractInstance.UploadConfirm(file, ack, {from: App.account})
+      .then(function(txReceipt) {
+        console.log("--UploadConfirm--");
+        console.log(txReceipt);
+        $(".alert-success").remove();
+
+        truffleContractInstance.GetFile.call(file)
+        .then(function (uploadedFile) { 
+          console.log(utils.describeFileTx(uploadedFile));
+        }).catch(function(err) {
+          console.log(err.message);
+        });
+
+      }).catch(function(err) {
+        console.log(err.message);
       })
-      .on('error', console.error);
   }
 };
-
 
 
 ethereum.on('accountsChanged', (accounts) => {
