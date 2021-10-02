@@ -80,8 +80,6 @@ App = {
 
     web3ContractInstance.events.UploadTransferAcked({})
       .on('data', async function(evt){
-          console.log(evt.returnValues);
-          //TODO check if digest is correct
           let cloudDigest = evt.returnValues.digest;
           let file = evt.returnValues.filepath;
 
@@ -90,6 +88,13 @@ App = {
           $(".alert-success").append("<br>Accept upload? ");
           $(".alert-success").append("<button class='upload-confirm' id='yes'>Yes</button>" +
                                      "<button class='upload-confirm' id='no'>No</button>");
+      })
+      .on('error', console.error);
+
+      web3ContractInstance.events.Deleted({})
+      .on('data', async function(evt){
+          console.log(evt.returnValues.filepath + " has been deleted");
+          window.location.reload();
       })
       .on('error', console.error);
 

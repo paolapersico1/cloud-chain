@@ -141,6 +141,7 @@ truffleContract.deployed().then(function(instance) {
         let file = event.returnValues.filepath;
 
         //TODO delete
+        deleteFile(file);
         
         truffleContractInstance.Delete(file, {from: account})
         .then(function(txReceipt) {
@@ -368,8 +369,8 @@ app.post("/*@mkdir", (req, res) => {
 	});
 });
 
-app.post("/*@delete", (req, res) => {
-	res.filename = req.params[0];
+/*app.post("/*@delete", (req, res) => {
+	res.path = req.params[0];
 
 	let files = JSON.parse(req.body.files);
 	if (!files || !files.map) {
@@ -380,7 +381,7 @@ app.post("/*@delete", (req, res) => {
 
 	let promises = files.map(f => {
 		return new Promise((resolve, reject) => {
-			fs.stat(relative(res.filename, f), (err, stats) => {
+			fs.stat(relative(res.path, f), (err, stats) => {
 				if (err) {
 					return reject(err);
 				}
@@ -405,7 +406,7 @@ app.post("/*@delete", (req, res) => {
 					op = fs.unlink;
 				}
 				if (op) {
-					op(relative(res.filename, f.name), (err) => {
+					op(relative(res.path, f.name), (err) => {
 						if (err) {
 							return reject(err);
 						}
@@ -427,7 +428,54 @@ app.post("/*@delete", (req, res) => {
 		req.flash("error", err.toString());
 		res.redirect("back");
 	});
-});
+});*/
+
+function deleteFile(file){
+	let promise = new Promise((resolve, reject) => {
+			fs.stat(file, (err, stats) => {
+				if (err) {
+					return reject(err);
+				}
+				resolve({
+					filepath: file,
+					isdirectory: stats.isDirectory(),
+					isfile: stats.isFile()
+				});
+			});
+		});
+
+	promise.then((f) => {
+		let promise = new Promise((resolve, reject) => {
+				let op = null;
+				if (f.isdirectory) {
+					op = (dir, cb) => rimraf(dir, {
+						glob: false
+					}, cb);
+				}
+				else if (f.isfile) {
+					op = fs.unlink;
+				}
+				if (op) {
+					op(f.filepath, (err) => {
+						if (err) {
+							return reject(err);
+						}
+						resolve();
+					});
+				}
+			});
+
+		promise.then(() => {
+			//req.flash("success", "Files deleted. ");
+		}).catch((err) => {
+			console.warn(err);
+			//req.flash("error", "Unable to delete some files: " + err);
+		});
+	}).catch((err) => {
+		console.warn(err);
+		//req.flash("error", err.toString());
+	});
+}
 
 app.get("/*@download", (req, res) => {
 	res.filename = req.params[0];
@@ -600,7 +648,6 @@ function fileHash(filepath, algorithm = 'sha256') {
     }
   });
 }
-
 
 app.get("/", (req, res) => {
 	res.redirect("/storage");

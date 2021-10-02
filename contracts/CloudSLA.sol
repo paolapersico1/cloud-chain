@@ -64,6 +64,7 @@ contract CloudSLA {
     event UploadRequestAcked(address indexed _from, string filepath);
     event UploadTransferAcked(address indexed _from, string filepath, bytes32 digest);
     event DeleteRequested(address indexed _from, string filepath);
+    event Deleted(address indexed _from, string filepath);
 
     constructor() {
         cloud = msg.sender;
@@ -115,6 +116,7 @@ contract CloudSLA {
         bytes32 i = Hash(filepath);
         files[i].states.push(State.deleted);
         files[i].onCloud = false;
+        emit Deleted(msg.sender, filepath);
     }
     
     function ReadRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, true){
