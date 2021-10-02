@@ -88,8 +88,8 @@ App = {
           $(".alert-success").append("<br>Uploaded file: '<span id='uploaded-filepath'>" + file + 
                                                           "</span>', digest: " + cloudDigest);
           $(".alert-success").append("<br>Accept upload? ");
-          $(".alert-success").append("<button class='upload-confirm' value='yes'>Yes</button>" +
-                                     "<button class='upload-confirm' value='no'>No</button>");
+          $(".alert-success").append("<button class='upload-confirm' id='yes'>Yes</button>" +
+                                     "<button class='upload-confirm' id='no'>No</button>");
       })
       .on('error', console.error);
 
@@ -119,13 +119,15 @@ App = {
 
   sendUploadConfirm: function(e){
     let file = $("#uploaded-filepath").text();
-    let value = $(".upload-confirm").val();
+
+    var idClicked = e.target.id;
     let ack = null;
-    if(value == "yes"){
+    if(idClicked === "yes"){
       ack = true;
-    }else if (value == "no"){
+    }else if (idClicked === "no"){
       ack = false;
     }
+    
     truffleContractInstance.UploadConfirm(file, ack, {from: App.account})
       .then(function(txReceipt) {
         console.log("--UploadConfirm--");
