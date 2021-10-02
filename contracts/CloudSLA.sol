@@ -63,7 +63,7 @@ contract CloudSLA {
     event UploadRequested(address indexed _from, string filepath);
     event UploadRequestAcked(address indexed _from, string filepath);
     event UploadTransferAcked(address indexed _from, string filepath, bytes32 digest);
-    event UploadConfirmed(address indexed _from, string filepath, bool ack);
+    event DeleteRequested(address indexed _from, string filepath);
 
     constructor() {
         cloud = msg.sender;
@@ -90,6 +90,7 @@ contract CloudSLA {
         bytes32 i = Hash(filepath);
         files[i].states.push(State.uploadTransferAck);
         files[i].digests.push(digest);
+        files[i].onCloud = true;
         emit UploadTransferAcked(msg.sender, filepath, digest);
     }
     
@@ -97,18 +98,17 @@ contract CloudSLA {
         bytes32 i = Hash(filepath);
         if(ack){
             files[i].states.push(State.uploaded); 
-            files[i].onCloud = true;
-            emit UploadConfirmed(msg.sender, filepath, true);
         }
         else{
             files[i].states.push(State.deleteRequested);
-            emit UploadConfirmed(msg.sender, filepath, false);
+            emit DeleteRequested(msg.sender, filepath);
         }
     }
     
     function DeleteRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, true){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.deleteRequested);
+        emit DeleteRequested(msg.sender, filepath);
     }
     
     function Delete(string calldata filepath) external OnlyCloud FileState(filepath, State.deleteRequested){

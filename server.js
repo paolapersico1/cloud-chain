@@ -134,6 +134,25 @@ truffleContract.deployed().then(function(instance) {
 				});
     })
 	  .on('error', console.error);
+
+	 web3ContractInstance.events.DeleteRequested({})
+    .on('data', async function(event){
+        console.log(event.returnValues);
+        let file = event.returnValues.filepath;
+
+        //TODO delete
+        
+        truffleContractInstance.Delete(file, {from: account})
+        .then(function(txReceipt) {
+        	console.log("--Delete--");
+		      console.log(txReceipt);
+
+		    }).catch(function(err) {
+				  console.log(err.message);
+				});
+    })
+	  .on('error', console.error);
+
 }).catch(function(err) {
   console.log(err.message);
 });

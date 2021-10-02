@@ -100,6 +100,7 @@ App = {
     $(document).on('click', '#connect', App.initWeb3);
     $(document).on('click', '.upload-confirm', App.sendUploadConfirm);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
+    $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
   },
 
   sendUploadRequest: function(e) {
@@ -114,6 +115,26 @@ App = {
       console.log(txReceipt);
     }).catch(function(err) {
       console.log(err.message);
+    });
+  },
+
+  sendDeleteRequest: function(e) {
+    e.preventDefault();
+
+    var filesToDelete = $(".multi-files-value").val();
+    filesToDelete = filesToDelete.replace(/'/g, '"');
+    filesToDelete = JSON.parse(filesToDelete);
+
+    filesToDelete.forEach(function deleteRequest(filename){
+      var filepath = "storage/" + filename;
+
+      truffleContractInstance.DeleteRequest(filepath, {from: App.account})
+      .then(function(txReceipt) {
+        console.log("--DeleteRequest--");
+        console.log(txReceipt);
+      }).catch(function(err) {
+        console.log(err.message);
+      });
     });
   },
 
