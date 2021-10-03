@@ -61,11 +61,13 @@ app.engine("handlebars", hbs({
 				return "";
 			}
 			let out = "";
+
+			path = fixUrl(path, true);
 			path = path.split("/");
 			path.splice(path.length - 1, 1);
 			path.unshift("");
 			path.forEach((folder, index) => {
-				out += options.fn({
+					out += options.fn({
 					name: folder + "/",
 					path: "/" + path.slice(1, index + 1).join("/"),
 					current: index === path.length - 1
@@ -139,8 +141,6 @@ truffleContract.deployed().then(function(instance) {
     .on('data', async function(event){
         console.log(event.returnValues);
         let file = event.returnValues.filepath;
-
-        //TODO delete
         deleteFile(file);
         
         truffleContractInstance.Delete(file, {from: account})
@@ -150,6 +150,41 @@ truffleContract.deployed().then(function(instance) {
 
 		    }).catch(function(err) {
 				  console.log(err.message);
+				});
+    })
+	  .on('error', console.error);
+
+	  web3ContractInstance.events.ReadRequested({})
+    .on('data', async function(event){
+        console.log(event.returnValues);
+        let file = event.returnValues.filepath;
+
+        let fileExists = new Promise((resolve, reject) => {
+					// check if file exists
+					fs.stat(relative(file), (err, stats) => {
+						if (err) {
+							return reject(err);
+						}
+						return resolve(stats);
+					});
+				});
+
+				fileExists.then((stats) => {
+					truffleContractInstance.ReadRequestAck(file, file, {from: account})
+		        .then(function(txReceipt) {
+		        	console.log("--ReadRequestAck--");
+				      console.log(txReceipt);
+				    }).catch(function(err) {
+						  console.log(err.message);
+						});
+				}).catch((err) => {
+					truffleContractInstance.ReadRequestDeny(file, {from: account})
+		        .then(function(txReceipt) {
+		        	console.log("--ReadRequestDeny--");
+				      console.log(txReceipt);
+				    }).catch(function(err) {
+						  console.log(err.message);
+						});
 				});
     })
 	  .on('error', console.error);
@@ -222,6 +257,8 @@ function flashify(req, obj) {
 
 app.all("/*", (req, res, next) => {
 	res.filename = req.params[0];
+	//TODO USER
+	res.filename = fixUrl(res.filename);
 
 	let fileExists = new Promise((resolve, reject) => {
 		// check if file exists
@@ -245,6 +282,7 @@ app.all("/*", (req, res, next) => {
 
 app.post("/*@upload", (req, res) => {
 	res.filename = req.params[0];
+	res.filename = fixUrl(res.filename);
 
 	let buff = null;
 	let saveas = null;
@@ -294,7 +332,7 @@ app.post("/*@upload", (req, res) => {
 						.then(function(hash){
 							let url = req.path.slice(1, req.path.indexOf("@upload"));
 							let filepath = url + saveas;
-							console.log(filepath);
+
 							truffleContractInstance.UploadTransferAck(filepath, hash, {from: account})
 				        .then(function(txReceipt) {
 				        	console.log("--UploadTransferAck--");
@@ -333,6 +371,7 @@ app.post("/*@upload", (req, res) => {
 
 app.post("/*@mkdir", (req, res) => {
 	res.filename = req.params[0];
+	res.filename = fixUrl(res.filename);;
 
 	let folder = req.body.folder;
 	if (!folder || folder.length < 1) {
@@ -476,6 +515,7 @@ function deleteFile(file){
 
 /*app.get("/*@download", (req, res) => {
 	res.filename = req.params[0];
+	res.filename = fixUrl(res.filename);;
 
 	let files = null;
 	try {
@@ -646,11 +686,19 @@ function fileHash(filepath, algorithm = 'sha256') {
   });
 }
 
+function fixUrl(url, inverseOrder = false){
+	let userId = 1;
+	if(inverseOrder)
+		return url.replace("storage/user" + userId, "mycloud");
+	else
+		return  url.replace("mycloud", "storage/user" + userId);
+}
+
 app.get("/", (req, res) => {
-	res.redirect("/storage");
+	res.redirect("/mycloud");
 })
 
-app.get("/*", (req, res) => {
+app.get("/*", (req, res) => { 
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
 			shellable: shellable,
@@ -676,7 +724,7 @@ app.get("/*", (req, res) => {
 		});
 
 		readDir.then((filenames) => {
-			const promises = filenames.map(f => fileHash(path.join(__dirname, req.url, f)).then((hash) => { 
+			const promises = filenames.map(f => fileHash(relative(res.filename, f)).then((hash) => { 
 				return new Promise((resolve, reject) => {
 					fs.stat(relative(res.filename, f), (err, stats) => {
 						if (err) {

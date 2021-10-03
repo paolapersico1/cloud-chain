@@ -65,6 +65,8 @@ contract CloudSLA {
     event UploadTransferAcked(address indexed _from, string filepath, bytes32 digest);
     event DeleteRequested(address indexed _from, string filepath);
     event Deleted(address indexed _from, string filepath);
+    event ReadRequested(address indexed _from, string filepath);
+    event ReadRequestAcked(address indexed _from, string filepath, string url);
 
     constructor() {
         cloud = msg.sender;
@@ -122,18 +124,20 @@ contract CloudSLA {
     function ReadRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, true){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.readRequested);
+        emit ReadRequested(msg.sender, filepath);
     }
     
     function ReadRequestAck(string calldata filepath, string calldata url) external OnlyCloud FileState(filepath, State.readRequested){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.readRequestAck);
         files[i].url = url;
+        emit ReadRequestAcked(msg.sender, filepath, url);
     }
     
     function ReadRequestDeny(string calldata filepath) external OnlyCloud FileState(filepath, State.readRequested){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.readDeny);
-        LostFileCheck(i);
+        //LostFileCheck(i);
     }
     
     //TODO ARBITRATOR

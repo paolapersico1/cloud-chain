@@ -123,8 +123,8 @@ App = {
   sendReadRequest: function(e) {
     e.preventDefault();
 
-    const saveas = $("#upload-file-saveas").val();
-    var filepath = getPath() + saveas;
+    let filename = e.target.text;
+    var filepath = getPath() + filename;
 
     truffleContractInstance.ReadRequest(filepath, {from: App.account})
     .then(function(txReceipt) {
@@ -201,7 +201,7 @@ App = {
 };
 
 function getPath(){
-  let pattern = "storage/";
+  let pattern = "mycloud/";
   let dir = window.location.href.slice(window.location.href.indexOf(pattern) + pattern.length);
   return pattern + dir;
 }
