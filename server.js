@@ -292,7 +292,9 @@ app.post("/*@upload", (req, res) => {
 				save.on("close", () => {
 					fileHash(saveName)
 						.then(function(hash){
-							let filepath = "storage/" + saveas;
+							let url = req.path.slice(1, req.path.indexOf("@upload"));
+							let filepath = url + saveas;
+							console.log(filepath);
 							truffleContractInstance.UploadTransferAck(filepath, hash, {from: account})
 				        .then(function(txReceipt) {
 				        	console.log("--UploadTransferAck--");

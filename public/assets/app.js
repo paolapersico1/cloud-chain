@@ -74,6 +74,7 @@ App = {
     web3ContractInstance.events.UploadRequestAcked({})
       .on('data', async function(evt){
           console.log(evt.returnValues);
+          //TODO file encryption
           $("form[action='@upload']").submit();
       })
       .on('error', console.error);
@@ -104,6 +105,7 @@ App = {
   bindEvents: function() {
     $(document).on('click', '#connect', App.initWeb3);
     $(document).on('submit', "form[action='@search']", App.search);
+    $(document).on('click', '.filename', App.sendReadRequest);
     $(document).on('click', '.upload-confirm', App.sendUploadConfirm);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
     $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
@@ -112,17 +114,32 @@ App = {
   search: function(e){
     e.preventDefault();
     var searchKey = $("#searchKey").val();
-    $(".name").each(function() {
+    $(".filename").each(function() {
       if (!$(this).text().includes(searchKey))
         $(this).parent().parent().parent().parent().remove();
     })
+  },
+
+  sendReadRequest: function(e) {
+    e.preventDefault();
+
+    const saveas = $("#upload-file-saveas").val();
+    var filepath = getPath() + saveas;
+
+    truffleContractInstance.ReadRequest(filepath, {from: App.account})
+    .then(function(txReceipt) {
+      console.log("--ReadRequest--");
+      console.log(txReceipt);
+    }).catch(function(err) {
+      console.log(err.message);
+    });
   },
 
   sendUploadRequest: function(e) {
     e.preventDefault();
 
     const saveas = $("#upload-file-saveas").val();
-    var filepath = "storage/" + saveas;
+    var filepath = getPath() + saveas;
 
     truffleContractInstance.UploadRequest(filepath, {from: App.account})
     .then(function(txReceipt) {
@@ -141,7 +158,7 @@ App = {
     filesToDelete = JSON.parse(filesToDelete);
 
     filesToDelete.forEach(function deleteRequest(filename){
-      var filepath = "storage/" + filename;
+      var filepath = getPath() + filename;
 
       truffleContractInstance.DeleteRequest(filepath, {from: App.account})
       .then(function(txReceipt) {
@@ -183,6 +200,11 @@ App = {
   }
 };
 
+function getPath(){
+  let pattern = "storage/";
+  let dir = window.location.href.slice(window.location.href.indexOf(pattern) + pattern.length);
+  return pattern + dir;
+}
 
 ethereum.on('accountsChanged', (accounts) => {
   // Handle the new accounts, or lack thereof.
