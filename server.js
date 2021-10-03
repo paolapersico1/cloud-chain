@@ -242,11 +242,6 @@ app.all("/*", (req, res, next) => {
 	});
 });
 
-app.post('/*@search', function(req, res){  
-    res.filename = req.body.myfilename; 
-    res.redirect(res.filename); 
-}); 
-
 
 app.post("/*@upload", (req, res) => {
 	res.filename = req.params[0];
@@ -477,7 +472,7 @@ function deleteFile(file){
 	});
 }
 
-app.get("/*@download", (req, res) => {
+/*app.get("/*@download", (req, res) => {
 	res.filename = req.params[0];
 
 	let files = null;
@@ -529,7 +524,7 @@ app.get("/*@download", (req, res) => {
 		req.flash("error", err.toString());
 		res.redirect("back");
 	});
-});
+});*/
 
 const shellable = process.env.SHELL != "false" && process.env.SHELL;
 const cmdable = process.env.CMD != "false" && process.env.CMD;

@@ -103,9 +103,19 @@ App = {
 
   bindEvents: function() {
     $(document).on('click', '#connect', App.initWeb3);
+    $(document).on('submit', "form[action='@search']", App.search);
     $(document).on('click', '.upload-confirm', App.sendUploadConfirm);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
     $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
+  },
+
+  search: function(e){
+    e.preventDefault();
+    var searchKey = $("#searchKey").val();
+    $(".name").each(function() {
+      if (!$(this).text().includes(searchKey))
+        $(this).parent().parent().parent().parent().remove();
+    })
   },
 
   sendUploadRequest: function(e) {
