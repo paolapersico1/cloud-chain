@@ -102,7 +102,7 @@ App = {
       web3ContractInstance.events.ReadRequestAcked({})
       .on('data', async function(evt){
           let url = evt.returnValues.url;
-          window.location.href = window.location.protocol + "//" + url;
+          window.location.href = window.location.protocol + "://" + url;
       })
       .on('error', console.error);
 

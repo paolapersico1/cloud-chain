@@ -27,7 +27,7 @@ const handlebars = require("handlebars");
 var dateFormat = require('dateformat');
 
 const Web3 = require('Web3');
-const { auth } = require('express-openid-connect');
+const { auth, requiresAuth } = require('express-openid-connect');
 const crypto = require('crypto');
 const PrivateKeyProvider = require("truffle-hdwallet-provider");
 const TruffleContract = require('@truffle/contract');
@@ -261,10 +261,18 @@ app.all("/*", (req, res, next) => {
 	});
 });
 
+app.get("/", (req, res) => {
+	if(req.oidc.isAuthenticated()) 
+		res.redirect("/mycloud");
+	else
+		res.render("list", {notloggedin: true});
+})
 
-app.post("/*@upload", (req, res) => {
-	if(!req.oidc.isAuthenticated()) 
-		res.redirect("/");
+app.get("/mycloud*", requiresAuth(), readDirOrFile);
+app.get("/storage*", readDirOrFile);
+app.get("/build*", readDirOrFile);
+
+app.post("/*@upload", requiresAuth(), (req, res) => {
 	res.filename = req.params[0];
 	res.filename = hidePath(res.filename, false);
 
@@ -353,9 +361,7 @@ app.post("/*@upload", (req, res) => {
 	req.pipe(req.busboy);
 });
 
-app.post("/*@mkdir", (req, res) => {
-	if(!req.oidc.isAuthenticated()) 
-		res.redirect("/");
+app.post("/*@mkdir", requiresAuth(), (req, res) => {
 	res.filename = req.params[0];
 	res.filename = hidePath(res.filename, false);;
 
@@ -390,67 +396,6 @@ app.post("/*@mkdir", (req, res) => {
 		});
 	});
 });
-
-/*app.post("/*@delete", (req, res) => {
-	res.path = req.params[0];
-
-	let files = JSON.parse(req.body.files);
-	if (!files || !files.map) {
-		req.flash("error", "No files selected.");
-		res.redirect("back");
-		return; // res.status(400).end();
-	}
-
-	let promises = files.map(f => {
-		return new Promise((resolve, reject) => {
-			fs.stat(relative(res.path, f), (err, stats) => {
-				if (err) {
-					return reject(err);
-				}
-				resolve({
-					name: f,
-					isdirectory: stats.isDirectory(),
-					isfile: stats.isFile()
-				});
-			});
-		});
-	});
-	Promise.all(promises).then((files) => {
-		let promises = files.map(f => {
-			return new Promise((resolve, reject) => {
-				let op = null;
-				if (f.isdirectory) {
-					op = (dir, cb) => rimraf(dir, {
-						glob: false
-					}, cb);
-				}
-				else if (f.isfile) {
-					op = fs.unlink;
-				}
-				if (op) {
-					op(relative(res.path, f.name), (err) => {
-						if (err) {
-							return reject(err);
-						}
-						resolve();
-					});
-				}
-			});
-		});
-		Promise.all(promises).then(() => {
-			req.flash("success", "Files deleted. ");
-			res.redirect("back");
-		}).catch((err) => {
-			console.warn(err);
-			//req.flash("error", "Unable to delete some files: " + err);
-			res.redirect("back");
-		});
-	}).catch((err) => {
-		console.warn(err);
-		//req.flash("error", err.toString());
-		res.redirect("back");
-	});
-});*/
 
 function deleteFile(file){
 	let promise = new Promise((resolve, reject) => {
@@ -499,61 +444,6 @@ function deleteFile(file){
 	});
 }
 
-/*app.get("/*@download", (req, res) => {
-	res.filename = req.params[0];
-	res.filename = hidePath(res.filename, false);
-
-	let files = null;
-	try {
-		files = JSON.parse(req.query.files);
-	} catch (e) {}
-	if (!files || !files.map) {
-		req.flash("error", "No files selected.");
-		res.redirect("back");
-		return; // res.status(400).end();
-	}
-
-	let promises = files.map(f => {
-		return new Promise((resolve, reject) => {
-			fs.stat(relative(res.filename, f), (err, stats) => {
-				if (err) {
-					return reject(err);
-				}
-				resolve({
-					name: f,
-					isdirectory: stats.isDirectory(),
-					isfile: stats.isFile()
-				});
-			});
-		});
-	});
-	Promise.all(promises).then((files) => {
-		let zip = archiver("zip", {});
-		zip.on("error", function(err) {
-			console.warn(err);
-			res.status(500).send({
-				error: err.message
-			});
-		});
-
-		files.filter(f => f.isfile).forEach((f) => {
-			zip.file(relative(res.filename, f.name), { name: f.name });
-		});
-		files.filter(f => f.isdirectory).forEach((f) => {
-			zip.directory(relative(res.filename, f.name), f.name);
-		});
-
-		res.attachment("Archive.zip");
-		zip.pipe(res);
-
-		zip.finalize();
-	}).catch((err) => {
-		console.warn(err);
-		//req.flash("error", err.toString());
-		res.redirect("back");
-	});
-});*/
-
 function fileHash(filepath, algorithm = 'sha256') {
   return new Promise((resolve, reject) => {
     // Algorithm depends on availability of OpenSSL on platform
@@ -587,20 +477,7 @@ function hidePath(path, hide=true){
 		return  path.replace("mycloud", "storage/user" + userId);
 }
 
-//Homepage
-app.get("/", (req, res) => {
-	if(req.oidc.isAuthenticated()){
-		res.redirect("/mycloud");
-	} 
-	else
-		res.render("list");
-})
-
-app.get("/*", (req, res) => { 
-	if(!req.oidc.isAuthenticated()){
-		res.redirect("/");
-	} 
-
+function readDirOrFile(req, res){
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
 			path: res.filename,
@@ -677,5 +554,6 @@ app.get("/*", (req, res) => {
 			dotfiles: "allow"
 		});
 	}
-});
+}
+
 
