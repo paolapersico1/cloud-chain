@@ -10,6 +10,7 @@ const session = require("express-session");
 const busboy = require("connect-busboy");
 const flash = require("connect-flash");
 const querystring = require("querystring");
+const dotenv = require('dotenv');
 
 const archiver = require("archiver");
 
@@ -26,6 +27,7 @@ const handlebars = require("handlebars");
 var dateFormat = require('dateformat');
 
 const Web3 = require('Web3');
+const { auth } = require('express-openid-connect');
 const crypto = require('crypto');
 const PrivateKeyProvider = require("truffle-hdwallet-provider");
 const TruffleContract = require('@truffle/contract');
@@ -35,8 +37,12 @@ const utils = require(path.join(__dirname, "public", "assets", "utils"));
 
 const srcdir =  path.join(__dirname, "public");
 
+dotenv.config();
+
 let app = express();
-let http = app.listen(process.env.PORT || 3001);
+const port = process.env.PORT || 3001;
+const hostname = process.env.ISSUER_BASE_URL || "http://cloudchain.com";
+let http = app.listen(port);
 
 app.set("views", path.join(srcdir, "views"));
 app.engine("handlebars", hbs({
@@ -62,7 +68,7 @@ app.engine("handlebars", hbs({
 			}
 			let out = "";
 
-			path = fixUrl(path, true);
+			path = hidePath(path);
 			path = path.split("/");
 			path.splice(path.length - 1, 1);
 			path.unshift("");
@@ -154,38 +160,41 @@ truffleContract.deployed().then(function(instance) {
     })
 	  .on('error', console.error);
 
-	  web3ContractInstance.events.ReadRequested({})
-    .on('data', async function(event){
-        console.log(event.returnValues);
+	web3ContractInstance.events.ReadRequested({})
+    .on('data', async function(event){    
         let file = event.returnValues.filepath;
+        let filepath = hidePath(file, false);
 
         let fileExists = new Promise((resolve, reject) => {
-					// check if file exists
-					fs.stat(relative(file), (err, stats) => {
-						if (err) {
-							return reject(err);
-						}
-						return resolve(stats);
-					});
+				// check if file exists
+				fs.stat(relative(filepath), (err, stats) => {
+					if (err) {
+						return reject(err);
+					}
+					return resolve(stats);
 				});
+			});
 
-				fileExists.then((stats) => {
-					truffleContractInstance.ReadRequestAck(file, file, {from: account})
+			fileExists.then((stats) => {
+				let url = hostname + ":" + port + "/" + filepath;
+				url = url.replace("\\", "/");
+				truffleContractInstance.ReadRequestAck(file, url, {from: account})
 		        .then(function(txReceipt) {
 		        	console.log("--ReadRequestAck--");
 				      console.log(txReceipt);
-				    }).catch(function(err) {
-						  console.log(err.message);
-						});
-				}).catch((err) => {
-					truffleContractInstance.ReadRequestDeny(file, {from: account})
+			    }).catch(function(err) {
+					  console.log(err.message);
+				});
+			}).catch((err) => {
+				console.log(err);
+				truffleContractInstance.ReadRequestDeny(file, {from: account})
 		        .then(function(txReceipt) {
 		        	console.log("--ReadRequestDeny--");
 				      console.log(txReceipt);
-				    }).catch(function(err) {
-						  console.log(err.message);
-						});
+			    }).catch(function(err) {
+					  console.log(err.message);
 				});
+			});
     })
 	  .on('error', console.error);
 
@@ -194,44 +203,17 @@ truffleContract.deployed().then(function(instance) {
 });
 
 // AUTH
+const config = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: process.env.SESSION_KEY,
+  baseURL: hostname + ":" + port,
+  clientID: process.env.CLIENT_ID,
+  issuerBaseURL: 'https://dev--0grxkki.us.auth0.com',
+};
 
-const KEY = process.env.KEY ? base32.decode(process.env.KEY.replace(/ /g, "")) : null;
-
-app.get("/@logout", (req, res) => {
-	if (KEY) {
-		req.session.login = false;
-		req.flash("success", "Signed out.");
-		res.redirect("/@login");
-		return
-	}
-	req.flash("error", "You were never logged in...");
-	res.redirect("back");
-});
-
-app.get("/@login", (req, res) => {
-	res.render("login", flashify(req, {}));
-});
-app.post("/@login", (req, res) => {
-	let pass = notp.totp.verify(req.body.token.replace(" ", ""), KEY);
-	if (pass) {
-		req.session.login = true;
-		res.redirect("/");
-		return;
-	}
-	req.flash("error", "Bad token.");
-	res.redirect("/@login");
-});
-
-app.use((req, res, next) => {
-	if (!KEY) {
-		return next();
-	}
-	if (req.session.login === true) {
-		return next();
-	}
-	req.flash("error", "Please sign in.");
-	res.redirect("/@login");
-});
+// auth router attaches /login, /logout, and /callback routes to the baseURL
+app.use(auth(config));
 
 function relative(...paths) {
 	return paths.reduce((a, b) => path.join(a, b), process.cwd());
@@ -251,14 +233,14 @@ function flashify(req, obj) {
 		}
 		obj.successes.push(success);
 	}
-	obj.isloginenabled = !!KEY;
+	obj.isloginenabled = false;
 	return obj;
 }
 
 app.all("/*", (req, res, next) => {
 	res.filename = req.params[0];
 	//TODO USER
-	res.filename = fixUrl(res.filename);
+	res.filename = hidePath(res.filename, false);
 
 	let fileExists = new Promise((resolve, reject) => {
 		// check if file exists
@@ -281,8 +263,10 @@ app.all("/*", (req, res, next) => {
 
 
 app.post("/*@upload", (req, res) => {
+	if(!req.oidc.isAuthenticated()) 
+		res.redirect("/");
 	res.filename = req.params[0];
-	res.filename = fixUrl(res.filename);
+	res.filename = hidePath(res.filename, false);
 
 	let buff = null;
 	let saveas = null;
@@ -370,8 +354,10 @@ app.post("/*@upload", (req, res) => {
 });
 
 app.post("/*@mkdir", (req, res) => {
+	if(!req.oidc.isAuthenticated()) 
+		res.redirect("/");
 	res.filename = req.params[0];
-	res.filename = fixUrl(res.filename);;
+	res.filename = hidePath(res.filename, false);;
 
 	let folder = req.body.folder;
 	if (!folder || folder.length < 1) {
@@ -395,7 +381,7 @@ app.post("/*@mkdir", (req, res) => {
 		fs.mkdir(relative(res.filename, folder), (err) => {
 			if (err) {
 				console.warn(err);
-				req.flash("error", err.toString());
+				//req.flash("error", err.toString());
 				res.redirect("back");
 				return;
 			}
@@ -456,12 +442,12 @@ app.post("/*@mkdir", (req, res) => {
 			res.redirect("back");
 		}).catch((err) => {
 			console.warn(err);
-			req.flash("error", "Unable to delete some files: " + err);
+			//req.flash("error", "Unable to delete some files: " + err);
 			res.redirect("back");
 		});
 	}).catch((err) => {
 		console.warn(err);
-		req.flash("error", err.toString());
+		//req.flash("error", err.toString());
 		res.redirect("back");
 	});
 });*/
@@ -515,7 +501,7 @@ function deleteFile(file){
 
 /*app.get("/*@download", (req, res) => {
 	res.filename = req.params[0];
-	res.filename = fixUrl(res.filename);;
+	res.filename = hidePath(res.filename, false);
 
 	let files = null;
 	try {
@@ -563,103 +549,10 @@ function deleteFile(file){
 		zip.finalize();
 	}).catch((err) => {
 		console.warn(err);
-		req.flash("error", err.toString());
+		//req.flash("error", err.toString());
 		res.redirect("back");
 	});
 });*/
-
-const shellable = process.env.SHELL != "false" && process.env.SHELL;
-const cmdable = process.env.CMD != "false" && process.env.CMD;
-if (shellable || cmdable) {
-	const shellArgs = process.env.SHELL.split(" ");
-	const exec = process.env.SHELL == "login" ? "/usr/bin/env" : shellArgs[0];
-	const args = process.env.SHELL == "login" ? ["login"] : shellArgs.slice(1);
-
-	const child_process = require("child_process");
-
-	app.post("/*@cmd", (req, res) => {
-		res.filename = req.params[0];
-
-		let cmd = req.body.cmd;
-		if (!cmd || cmd.length < 1) {
-			return res.status(400).end();
-		}
-		console.log("running command " + cmd);
-
-		child_process.exec(cmd, {
-			cwd: relative(res.filename),
-			timeout: 60 * 1000,
-		}, (err, stdout, stderr) => {
-			if (err) {
-				console.log("command run failed: " + JSON.stringify(err));
-				req.flash("error", "Command failed due to non-zero exit code");
-			}
-			res.render("cmd", flashify(req, {
-				path: res.filename,
-				cmd: cmd,
-				stdout: stdout,
-				stderr: stderr,
-			}));
-		});
-	});
-
-	const pty = require("node-pty");
-	const WebSocket = require("ws");
-
-	app.get("/*@shell", (req, res) => {
-		res.filename = req.params[0];
-
-		res.render("shell", flashify(req, {
-			path: res.filename,
-		}));
-	});
-
-	const ws = new WebSocket.Server({ server: http });
-	ws.on("connection", (socket, request) => {
-		const { path } = querystring.parse(request.url.split("?")[1]);
-		let cwd = relative(path);
-		let term = pty.spawn(exec, args, {
-			name: "xterm-256color",
-			cols: 80,
-			rows: 30,
-			cwd: cwd,
-		});
-		console.log("pid " + term.pid + " shell " + process.env.SHELL + " started in " + cwd);
-
-		term.on("data", (data) => {
-			socket.send(data, { binary: true });
-		});
-		term.on("exit", (code) => {
-			console.log("pid " + term.pid + " ended")
-			socket.close();
-		});
-		socket.on("message", (data) => {
-			// special messages should decode to Buffers
-			if (Buffer.isBuffer(data)) {
-				switch (data.readUInt16BE(0)) {
-				case 0:
-					term.resize(data.readUInt16BE(1), data.readUInt16BE(2));
-					return;
-				}
-			}
-			term.write(data);
-		});
-		socket.on("close", () => {
-			term.end();
-		});
-	});
-}
-
-const SMALL_IMAGE_MAX_SIZE = 750 * 1024;  // 750 KB
-const EXT_IMAGES = [".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".tiff"];
-function isimage(f) {
-	for (const ext of EXT_IMAGES) {
-		if (f.endsWith(ext)) {
-			return true;
-		}
-	}
-	return false;
-}
 
 function fileHash(filepath, algorithm = 'sha256') {
   return new Promise((resolve, reject) => {
@@ -686,26 +579,33 @@ function fileHash(filepath, algorithm = 'sha256') {
   });
 }
 
-function fixUrl(url, inverseOrder = false){
-	let userId = 1;
-	if(inverseOrder)
-		return url.replace("storage/user" + userId, "mycloud");
+function hidePath(path, hide=true){
+	let userId = "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
+	if(hide)
+		return path.replace("storage/user" + userId, "mycloud");
 	else
-		return  url.replace("mycloud", "storage/user" + userId);
+		return  path.replace("mycloud", "storage/user" + userId);
 }
 
+//Homepage
 app.get("/", (req, res) => {
-	res.redirect("/mycloud");
+	if(req.oidc.isAuthenticated()){
+		res.redirect("/mycloud");
+	} 
+	else
+		res.render("list");
 })
 
 app.get("/*", (req, res) => { 
+	if(!req.oidc.isAuthenticated()){
+		res.redirect("/");
+	} 
+
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
-			shellable: shellable,
-			cmdable: cmdable,
 			path: res.filename,
 			errors: [
-				res.stats.error
+				"Error fetching resource."
 			]
 		}));
 	}
@@ -731,7 +631,7 @@ app.get("/*", (req, res) => {
 							console.warn(err);
 							return resolve({
 								name: f,
-								error: err
+								error: "Error fetching resource."
 							});
 						}
 						resolve({
@@ -747,30 +647,24 @@ app.get("/*", (req, res) => {
 
 			Promise.all(promises).then((files) => {
 				res.render("list", flashify(req, {
-					shellable: shellable,
-					cmdable: cmdable,
 					path: res.filename,
 					files: files,
 				}));
 			}).catch((err) => {
 				console.error(err);
 				res.render("list", flashify(req, {
-					shellable: shellable,
-					cmdable: cmdable,
 					path: res.filename,
 					errors: [
-						err
+						"Error fetching resource."
 					]
 				}));
 			});
 		}).catch((err) => {
 			console.warn(err);
 			res.render("list", flashify(req, {
-				shellable: shellable,
-				cmdable: cmdable,
 				path: res.filename,
 				errors: [
-					err
+					"Error fetching resource."
 				]
 			}));
 		});

@@ -1,7 +1,8 @@
 {{> navbar path=path}}
 <div style="padding-bottom: 56px;"> </div>
-{{> toolbar shellable=shellable cmdable=cmdable}}
-
+{{#if isloggedin}}
+	{{> toolbar}}
+{{/if}}	
 <div style="padding-top: auto; padding-bottom: 56px;">
 	<main class="container my-4">
 		<div class="row justify-content-right">
@@ -60,9 +61,14 @@
 						</label>
 					</li>
 				{{else}}
-					<li class="list-group-item">
-						No files
-					</li>
+					{{#if isloggedin}}
+						<li class="list-group-item">
+							No files
+						</li>
+					{{else}}
+						<h2>Welcome to CloudChain!</h2>
+						<p>Please login to manage your files.</p>
+					{{/if}}
 				{{/each}}
 				</ul>
 			</div>
@@ -72,7 +78,5 @@
 
 {{> dialogue-upload}}
 {{> dialogue-mkdir}}
-{{> dialogue-cmd}}
-
 {{> dialogue-download}}
 {{> dialogue-delete}}

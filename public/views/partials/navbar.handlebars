@@ -1,6 +1,6 @@
 <nav class="navbar navbar-dark bg-primary fixed-top navbar-expand-sm">
 	<div class="container-fluid">
-		<a class="navbar-brand" href="/">Cloud Service</a>
+		<a class="navbar-brand" href="/">CloudChain</a>
 		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
 			<span class="navbar-toggler-icon"></span>
 		</button>
@@ -13,18 +13,16 @@
 			<div class="navbar-nav">
 				<a class="nav-item nav-link" id="account">Account: </a>
 				<a class="nav-item nav-link" id="connect" title="Connect to wallet">{{octicon "book"}}</a>
-				{{#if isloginenabled}}
-				{{#if isloggingin}}
-					<a class="nav-item nav-link" href="/@login" title="Sign in" data-bs-placement="left">
-						{{octicon "sign-in"}}
-					</a>
-				{{else}}
-					<a class="nav-item nav-link" href="/@logout" title="Sign out" data-bs-placement="left">
+				{{#if isloggedin}}
+					<a class="nav-item nav-link" href="/logout" title="Sign out" data-bs-placement="left">
 						{{octicon "sign-out"}}
 					</a>
+					
+				{{else}}
+					<a class="nav-item nav-link" href="/login" title="Sign in" data-bs-placement="left">
+						{{octicon "sign-in"}}
+					</a>
 				{{/if}}
-				{{/if}}
-
 			</div>
 		</div>
 	</div>
