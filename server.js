@@ -3,6 +3,7 @@
 /* jshint esversion: 6 */
 /* jshint node: true */
 "use strict";
+const https = require('https');
 const express = require("express");
 const hbs = require("express-handlebars");
 const bodyparser = require("body-parser");
@@ -38,11 +39,22 @@ const utils = require(path.join(__dirname, "public", "assets", "utils"));
 const srcdir =  path.join(__dirname, "public");
 
 dotenv.config();
+const options = {
+  key: fs.readFileSync( "cloudchain.com+3-key.pem", "utf-8"),
+  cert: fs.readFileSync("cloudchain.com+3.pem", "utf-8"),
+};
 
-let app = express();
-const port = process.env.PORT || 3001;
-const hostname = process.env.ISSUER_BASE_URL || "http://cloudchain.com";
-let http = app.listen(port);
+const app = express();
+const port = process.env.PORT || 443;
+const hostname = process.env.ISSUER_BASE_URL || "https://cloudchain.com";
+https.createServer(options, app).listen(port);
+
+const httpApp = express();
+const http = require('http');
+httpApp.get("*", function(req, res, next) {
+    res.redirect("https://" + req.headers.host + req.path);
+});
+http.createServer(httpApp).listen(80);
 
 app.set("views", path.join(srcdir, "views"));
 app.engine("handlebars", hbs({
@@ -269,7 +281,7 @@ app.get("/", (req, res) => {
 })
 
 app.get("/mycloud*", requiresAuth(), readDirOrFile);
-app.get("/storage*", readDirOrFile);
+app.get("/storage/user0x*", readDirOrFile);
 app.get("/build*", readDirOrFile);
 
 app.post("/*@upload", requiresAuth(), (req, res) => {

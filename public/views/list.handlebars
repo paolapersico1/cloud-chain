@@ -1,8 +1,8 @@
 {{> navbar path=path}}
 <div style="padding-bottom: 56px;"> </div>
-{{#if isloggedin}}
+{{#unless notloggedin}}
 	{{> toolbar}}
-{{/if}}	
+{{/unless}}	
 <div style="padding-top: auto; padding-bottom: 56px;">
 	<main class="container my-4">
 		<div class="row justify-content-right">
@@ -31,7 +31,6 @@
 							</div>
 						</label>
 					</li>
-				{{/if}}	
 				{{#each files}}
 					<li class="list-group-item">
 						<label for="check{{@index}}" class="stretched-invisible-label">
@@ -60,16 +59,17 @@
 							</div>
 						</label>
 					</li>
+				{{/each}}
 				{{else}}
-					{{#if isloggedin}}
+					{{#if notloggedin}}
+						<h2>Welcome to CloudChain!</h2>
+						<p>Please login to manage your files.</p>
+					{{else}}
 						<li class="list-group-item">
 							No files
 						</li>
-					{{else}}
-						<h2>Welcome to CloudChain!</h2>
-						<p>Please login to manage your files.</p>
 					{{/if}}
-				{{/each}}
+				{{/if}}	
 				</ul>
 			</div>
 		</div>

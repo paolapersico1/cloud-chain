@@ -1,3 +1,5 @@
 **/node_modules
 **/storage
 .env
+cloudchain.com+3.pem
+cloudchain.com+3-key.pem
