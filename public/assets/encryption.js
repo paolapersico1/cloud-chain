@@ -23,13 +23,13 @@ async function encryptfile(objFile, txtEncpassphrase) {
     .catch(function(err){
         console.error(err);
     });
-    console.log('passphrasekey imported');
+    //console.log('passphrasekey imported');
 
     var pbkdf2bytes=await window.crypto.subtle.deriveBits({"name": 'PBKDF2', "salt": pbkdf2salt, "iterations": pbkdf2iterations, "hash": 'SHA-256'}, passphrasekey, 384)        
     .catch(function(err){
         console.error(err);
     });
-    console.log('pbkdf2bytes derived');
+    //console.log('pbkdf2bytes derived');
     pbkdf2bytes=new Uint8Array(pbkdf2bytes);
 
     keybytes=pbkdf2bytes.slice(0,32);
@@ -39,11 +39,11 @@ async function encryptfile(objFile, txtEncpassphrase) {
     .catch(function(err){
         console.error(err);
     });
-    console.log('key imported');        
+    //console.log('key imported');        
 
     var cipherbytes=await window.crypto.subtle.encrypt({name: "AES-CBC", iv: ivbytes}, key, plaintextbytes)
     .catch(function(err){
-        console.error(err);
+        console.error(err); 
     });
 
     if(!cipherbytes) {
@@ -58,18 +58,16 @@ async function encryptfile(objFile, txtEncpassphrase) {
     resultbytes.set(pbkdf2salt, 8);
     resultbytes.set(cipherbytes, 16);
 
+    var hashBuffer = await window.crypto.subtle.digest('SHA-256', resultbytes);
+    // convert buffer to byte array
+    const hashArray = Array.from(new Uint8Array(hashBuffer));  
+    // convert bytes to hex string                   
+    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
     var blob = new Blob([resultbytes]);
     var file = new File([blob], objFile.name);
 
-    return file;
-    
-    /*var blobUrl=URL.createObjectURL(blob);
-    aEncsavefile.href=blobUrl;
-    aEncsavefile.download=objFile.name + '.enc';
-
-    spnEncstatus.classList.add("greenspan");
-    spnEncstatus.innerHTML='<p>File encrypted.</p>';
-    aEncsavefile.hidden=false;*/
+    return [file, hash];
 }
 
 async function decryptfile(objFile, txtDecpassphrase) {

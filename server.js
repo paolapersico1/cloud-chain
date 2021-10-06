@@ -528,7 +528,7 @@ function readDirOrFile(req, res){
 							name: f,
 							isdirectory: stats.isDirectory(),
 							size: stats.size,
-							dateadded: dateFormat(stats.birthtime, "yyyy-mm-dd h:MM:ss"),
+							dateadded: dateFormat(stats.birthtime, "yyyy-mm-dd H:MM:ss"),
 							digest : hash
 						});
 					});

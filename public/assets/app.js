@@ -114,6 +114,7 @@ App = {
     $(document).on('submit', "form[action='@search']", App.search);
     $(document).on('click', '.filename', App.sendReadRequest);
     $(document).on('click', '.upload-confirm', App.sendUploadConfirm);
+    $(document).on('click', "#encrypt-btn", App.encryptFile);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
     $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
   },
@@ -142,33 +143,53 @@ App = {
     });
   },
 
+  encryptFile: function(e){
+    e.preventDefault();
+
+    const enckey = $("#upload-file-key").val();
+    if(enckey.length >= 8){
+      const file =  $("#upload-file")[0].files[0];
+      encryptfile(file, enckey)
+      .then(res => {
+        console.log(res);
+        let file = res[0];
+        let hash = res[1];
+
+        // Create a DataTransfer instance and add a newly created file
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+
+        // Assign the DataTransfer files list to the file input
+        $("#upload-file")[0].files = dataTransfer.files;
+        $("#upload-file-hash").val();
+        $form.find("#encrypt-msg").text("Encryption succeded. Hash: 0x" + hash);
+        $form.find("#encrypt-msg").css( "color", "green" );
+      })
+      .catch(err => {
+          console.log(err);
+          $form.find("#encrypt-msg").text("Encryption failed.");
+          $form.find("#encrypt-msg").css( "color", "red" );
+        });
+      }
+    else{
+      $form.find("#encrypt-msg").text("Key must be at least 8 characters long.");
+      $form.find("#encrypt-msg").css( "color", "red" );
+    }
+  },
+
   sendUploadRequest: function(e) {
     e.preventDefault();
 
     const saveas = $("#upload-file-saveas").val();
     var filepath = getPath() + saveas;
 
-    const file =  $("#upload-file")[0].files[0];
-    const enckey = $("#upload-file-key").val();
-
-    encryptfile(file, enckey)
-    .then(file => {
-      // Create a DataTransfer instance and add a newly created file
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-
-      // Assign the DataTransfer files list to the file input
-       $("#upload-file")[0].files = dataTransfer.files;
-
-       truffleContractInstance.UploadRequest(filepath, {from: App.account})
-      .then(function(txReceipt) {
-        console.log("--UploadRequest--");
-        console.log(txReceipt);
-      }).catch(function(err) {
-        console.log(err.message);
-      });
-    })
-    .catch(err => console.log(err));
+    truffleContractInstance.UploadRequest(filepath, {from: App.account})
+    .then(function(txReceipt) {
+      console.log("--UploadRequest--");
+      console.log(txReceipt);
+    }).catch(function(err) {
+      console.log(err.message);
+    });
   },
 
   sendDeleteRequest: function(e) {
