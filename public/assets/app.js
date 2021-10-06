@@ -74,7 +74,6 @@ App = {
     web3ContractInstance.events.UploadRequestAcked({})
       .on('data', async function(evt){
           console.log(evt.returnValues);
-          //TODO file encryption
           $("form[action='@upload']").submit();
       })
       .on('error', console.error);
@@ -102,7 +101,8 @@ App = {
       web3ContractInstance.events.ReadRequestAcked({})
       .on('data', async function(evt){
           let url = evt.returnValues.url;
-          window.location.href = window.location.protocol + "://" + url;
+          console.log(url);
+          window.location.href = url;
       })
       .on('error', console.error);
 
@@ -148,13 +148,27 @@ App = {
     const saveas = $("#upload-file-saveas").val();
     var filepath = getPath() + saveas;
 
-    truffleContractInstance.UploadRequest(filepath, {from: App.account})
-    .then(function(txReceipt) {
-      console.log("--UploadRequest--");
-      console.log(txReceipt);
-    }).catch(function(err) {
-      console.log(err.message);
-    });
+    const file =  $("#upload-file")[0].files[0];
+    const enckey = $("#upload-file-key").val();
+
+    encryptfile(file, enckey)
+    .then(file => {
+      // Create a DataTransfer instance and add a newly created file
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+
+      // Assign the DataTransfer files list to the file input
+       $("#upload-file")[0].files = dataTransfer.files;
+
+       truffleContractInstance.UploadRequest(filepath, {from: App.account})
+      .then(function(txReceipt) {
+        console.log("--UploadRequest--");
+        console.log(txReceipt);
+      }).catch(function(err) {
+        console.log(err.message);
+      });
+    })
+    .catch(err => console.log(err));
   },
 
   sendDeleteRequest: function(e) {

@@ -490,6 +490,7 @@ function hidePath(path, hide=true){
 }
 
 function readDirOrFile(req, res){
+	console.log(JSON.stringify(req.oidc.user, null, 2));
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
 			path: res.filename,
