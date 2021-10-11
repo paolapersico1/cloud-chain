@@ -15,7 +15,30 @@
 						{{success}}
 					</div>
 				{{/each}}
-				<a id="downloadLink" download="" href="#">Download File</a>
+				<div class="modal-body container">
+					<div class="row mt-3">
+						<div id="hash">File hash: 0x</div>
+					</div>
+					<div class="row mt-3">
+						<div class="col-2">
+							<label class="form-label" for="decrypt-file-key">Decryption key:</label>
+						</div>
+						<div class="col-8">
+							<input class="form-control" type="password" id="decrypt-file-key" value=''/>
+						</div>
+						<div class="col-2">
+							<button id="decrypt-btn" class="btn btn-outline-primary">Decrypt</button>
+						</div>
+						<div>
+							<h6 id="decrypt-msg"></h6>
+						</div>
+					</div>
+					<div class="row mt-3">
+						<div class="col-4">
+							<a id="downloadLink" download="" href="#">Download File</a>
+						</div>
+					</div>
+				</div>
 				</ul>
 			</div>
 		</div>

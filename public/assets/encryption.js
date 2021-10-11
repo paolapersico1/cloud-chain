@@ -58,23 +58,10 @@ async function encryptfile(objFile, txtEncpassphrase) {
     resultbytes.set(pbkdf2salt, 8);
     resultbytes.set(cipherbytes, 16);
 
-    var hashBuffer = await window.crypto.subtle.digest('SHA-256', resultbytes);
-    // convert buffer to byte array
-    const hashArray = Array.from(new Uint8Array(hashBuffer));  
-    // convert bytes to hex string                   
-    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-    var blob = new Blob([resultbytes]);
-    var file = new File([blob], objFile.name);
-
-    return [file, hash];
+    return [file, hash(resultbytes)];
 }
 
-async function decryptfile(objFile, txtDecpassphrase) {
-    var cipherbytes=await new Response(objFile).arrayBuffer()
-    .catch(function(err){
-        console.error(err);
-    }); 
+async function decryptfile(cipherbytes, txtDecpassphrase) {
     var cipherbytes=new Uint8Array(cipherbytes);
 
     var pbkdf2iterations=10000;
@@ -120,4 +107,14 @@ async function decryptfile(objFile, txtDecpassphrase) {
 
     var blob = new Blob([plaintextbytes]);
     return blob;
+}
+
+async function hash(inputbytes){
+    var hashBuffer = await window.crypto.subtle.digest('SHA-256', inputbytes);
+    // convert buffer to byte array
+    const hashArray = Array.from(new Uint8Array(hashBuffer));  
+    // convert bytes to hex string                   
+    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    return hash;
 }
