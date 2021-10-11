@@ -114,6 +114,8 @@ app.use(flash());
 app.use(busboy());
 app.use(express.urlencoded({ extended: true }))
 
+var accounts = {"auth0|615afaf5c69eb200704af4b8" : "0x627306090abaB3A6e1400e9345bC60c78a8BEf57"}
+
 //Initialize CloudSLA interaction 
 const provider = truffleConfig.networks.quickstartWallet.provider();
 const account = provider.getAddress(); // 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
@@ -175,7 +177,8 @@ truffleContract.deployed().then(function(instance) {
 	web3ContractInstance.events.ReadRequested({})
     .on('data', async function(event){    
         let file = event.returnValues.filepath;
-        let filepath = hidePath(file, false);
+        let user = event.returnValues._from;
+        let filepath = hidePath(file, user, false);
 
         let fileExists = new Promise((resolve, reject) => {
 				// check if file exists
@@ -250,9 +253,10 @@ function flashify(req, obj) {
 }
 
 app.all("/*", (req, res, next) => {
+	//res.locals.user = req.oidc.user;
+
 	res.filename = req.params[0];
-	//TODO USER
-	res.filename = hidePath(res.filename, false);
+	res.filename = hidePath(res.filename, accounts[req.oidc.user.sub], false);
 	res.filename = res.filename.replace("@read", "");
 
 	let fileExists = new Promise((resolve, reject) => {
@@ -303,7 +307,7 @@ app.get("/storage*", readFile);
 
 app.post("/*@upload", requiresAuth(), (req, res) => {
 	res.filename = req.params[0];
-	res.filename = hidePath(res.filename, false);
+	res.filename = hidePath(res.filename, accounts[req.oidc.user.sub], false);
 
 	let buff = null;
 	let saveas = null;
@@ -392,7 +396,7 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 
 app.post("/*@mkdir", requiresAuth(), (req, res) => {
 	res.filename = req.params[0];
-	res.filename = hidePath(res.filename, false);;
+	res.filename = hidePath(res.filename, accounts[req.oidc.user.sub], false);;
 
 	let folder = req.body.folder;
 	if (!folder || folder.length < 1) {
@@ -498,10 +502,12 @@ function fileHash(filepath, algorithm = 'sha256') {
   });
 }
 
-function hidePath(path, hide=true){
-	let userId = "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
-	if(hide)
-		return path.replace("storage/user" + userId, "mycloud");
+function hidePath(path, userId, hide=true){	
+	if(hide){
+		path = path.replace("storage/", "");
+		path = path.replace(path.substring(0, path.indexOf("/")), "mycloud");
+		return(path);
+	}
 	else
 		return  path.replace("mycloud", "storage/user" + userId);
 }

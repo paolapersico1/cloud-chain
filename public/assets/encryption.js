@@ -58,7 +58,10 @@ async function encryptfile(objFile, txtEncpassphrase) {
     resultbytes.set(pbkdf2salt, 8);
     resultbytes.set(cipherbytes, 16);
 
-    return [file, hash(resultbytes)];
+    var blob = new Blob([resultbytes]);
+    var file = new File([blob], objFile.name);
+
+    return [file, await hash(resultbytes)];
 }
 
 async function decryptfile(cipherbytes, txtDecpassphrase) {

@@ -101,7 +101,6 @@ App = {
       web3ContractInstance.events.ReadRequestAcked({})
       .on('data', async function(evt){
           let url = evt.returnValues.url;
-          //TODO: create modal to enter key, decrypt and save
           window.location.href = url;
       })
       .on('error', console.error);
