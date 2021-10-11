@@ -71,14 +71,14 @@ async function encryptfile(objFile, txtEncpassphrase) {
 }
 
 async function decryptfile(objFile, txtDecpassphrase) {
-    var cipherbytes=await readfile(objFile)
+    var cipherbytes=await new Response(objFile).arrayBuffer()
     .catch(function(err){
         console.error(err);
     }); 
     var cipherbytes=new Uint8Array(cipherbytes);
 
     var pbkdf2iterations=10000;
-    var passphrasebytes=new TextEncoder("utf-8").encode(txtDecpassphrase.value);
+    var passphrasebytes=new TextEncoder("utf-8").encode(txtDecpassphrase);
     var pbkdf2salt=cipherbytes.slice(8,16);
 
 
@@ -87,13 +87,13 @@ async function decryptfile(objFile, txtDecpassphrase) {
         console.error(err);
 
     });
-    console.log('passphrasekey imported');
+    //console.log('passphrasekey imported');
 
     var pbkdf2bytes=await window.crypto.subtle.deriveBits({"name": 'PBKDF2', "salt": pbkdf2salt, "iterations": pbkdf2iterations, "hash": 'SHA-256'}, passphrasekey, 384)        
     .catch(function(err){
         console.error(err);
     });
-    console.log('pbkdf2bytes derived');
+    //console.log('pbkdf2bytes derived');
     pbkdf2bytes=new Uint8Array(pbkdf2bytes);
 
     keybytes=pbkdf2bytes.slice(0,32);
@@ -104,7 +104,7 @@ async function decryptfile(objFile, txtDecpassphrase) {
     .catch(function(err){
         console.error(err);
     });
-    console.log('key imported');        
+    //console.log('key imported');        
 
     var plaintextbytes=await window.crypto.subtle.decrypt({name: "AES-CBC", iv: ivbytes}, key, cipherbytes)
     .catch(function(err){
@@ -115,15 +115,9 @@ async function decryptfile(objFile, txtDecpassphrase) {
         return;
     }
 
-    console.log('ciphertext decrypted');
+    //console.log('ciphertext decrypted');
     plaintextbytes=new Uint8Array(plaintextbytes);
 
-    /*var blob=new Blob([plaintextbytes], {type: 'application/download'});
-    var blobUrl=URL.createObjectURL(blob);
-    aDecsavefile.href=blobUrl;
-    aDecsavefile.download=objFile.name + '.dec';
-
-    spnDecstatus.classList.add("greenspan");
-    spnDecstatus.innerHTML='<p>File decrypted.</p>';
-    aDecsavefile.hidden=false;*/
+    var blob = new Blob([plaintextbytes]);
+    return blob;
 }

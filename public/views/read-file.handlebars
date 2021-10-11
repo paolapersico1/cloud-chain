@@ -1,0 +1,28 @@
+<script src="/@assets/read-file.js" defer></script>
+{{> navbar path=path}}
+<div style="padding-bottom: 56px;"> </div>
+<div style="padding-top: auto; padding-bottom: 56px;">
+	<main class="container my-4">
+		<div class="row justify-content-right">
+			<div>
+				{{#each errors as |error|}}
+					<div class="alert alert-danger" role="alert">
+						{{error}}
+					</div>
+				{{/each}}
+				{{#each successes as |success|}}
+					<div class="alert alert-success" role="alert">
+						{{success}}
+					</div>
+				{{/each}}
+				<a id="downloadLink" download="" href="#">Download File</a>
+				</ul>
+			</div>
+		</div>
+	</main>
+</div>
+
+{{> dialogue-upload}}
+{{> dialogue-mkdir}}
+{{> dialogue-download}}
+{{> dialogue-delete}}

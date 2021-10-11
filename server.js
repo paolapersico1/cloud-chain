@@ -190,6 +190,7 @@ truffleContract.deployed().then(function(instance) {
 			fileExists.then((stats) => {
 				let url = hostname + ":" + port + "/" + filepath;
 				url = url.replace("\\", "/");
+				url = url + "@read";
 				truffleContractInstance.ReadRequestAck(file, url, {from: account})
 		        .then(function(txReceipt) {
 		        	console.log("--ReadRequestAck--");
@@ -245,7 +246,6 @@ function flashify(req, obj) {
 		}
 		obj.successes.push(success);
 	}
-	obj.isloginenabled = false;
 	return obj;
 }
 
@@ -253,6 +253,7 @@ app.all("/*", (req, res, next) => {
 	res.filename = req.params[0];
 	//TODO USER
 	res.filename = hidePath(res.filename, false);
+	res.filename = res.filename.replace("@read", "");
 
 	let fileExists = new Promise((resolve, reject) => {
 		// check if file exists
@@ -280,9 +281,25 @@ app.get("/", (req, res) => {
 		res.render("list", {notloggedin: true});
 })
 
+app.get("/build/contracts/CloudSLA.json", readFile);
 app.get("/mycloud*", requiresAuth(), readDirOrFile);
-app.get("/storage/user0x*", readDirOrFile);
-app.get("/build*", readDirOrFile);
+app.get("/*@read", (req, res) => {
+	if (res.stats.error) {
+		res.render("list", flashify(req, {
+			path: res.filename,
+			errors: [
+				"Error fetching resource."
+			],
+			notloggedin: !req.oidc.isAuthenticated()
+		}));
+	}
+	else if (res.stats.isFile()) {
+		res.render("read-file", flashify(req, {
+			notloggedin: !req.oidc.isAuthenticated()
+		}))
+	}
+})
+app.get("/storage*", readFile);
 
 app.post("/*@upload", requiresAuth(), (req, res) => {
 	res.filename = req.params[0];
@@ -489,14 +506,32 @@ function hidePath(path, hide=true){
 		return  path.replace("mycloud", "storage/user" + userId);
 }
 
-function readDirOrFile(req, res){
-	console.log(JSON.stringify(req.oidc.user, null, 2));
+function readFile(req, res){
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
 			path: res.filename,
 			errors: [
 				"Error fetching resource."
-			]
+			],
+			notloggedin: !req.oidc.isAuthenticated()
+		}));
+	}
+	else if (res.stats.isFile()) {
+		res.sendFile(relative(res.filename), (err) => {
+    	if (err) console.log(err);
+  	});
+	}
+}
+
+function readDirOrFile(req, res){
+	//console.log(JSON.stringify(req.oidc.user, null, 2));
+	if (res.stats.error) {
+		res.render("list", flashify(req, {
+			path: res.filename,
+			errors: [
+				"Error fetching resource."
+			],
+			notloggedin: !req.oidc.isAuthenticated()
 		}));
 	}
 	else if (res.stats.isDirectory()) {
@@ -539,6 +574,7 @@ function readDirOrFile(req, res){
 				res.render("list", flashify(req, {
 					path: res.filename,
 					files: files,
+					notloggedin: !req.oidc.isAuthenticated()
 				}));
 			}).catch((err) => {
 				console.error(err);
@@ -546,7 +582,8 @@ function readDirOrFile(req, res){
 					path: res.filename,
 					errors: [
 						"Error fetching resource."
-					]
+					],
+					notloggedin: !req.oidc.isAuthenticated()
 				}));
 			});
 		}).catch((err) => {
@@ -555,17 +592,15 @@ function readDirOrFile(req, res){
 				path: res.filename,
 				errors: [
 					"Error fetching resource."
-				]
+				],
+				notloggedin: !req.oidc.isAuthenticated()
 			}));
 		});
 	}
 	else if (res.stats.isFile()) {
-		res.sendFile(relative(res.filename), {
-			headers: {
-				"Content-Security-Policy": "default-src 'self'; script-src 'none'; sandbox"
-			},
-			dotfiles: "allow"
-		});
+		res.sendFile(relative(res.filename), (err) => {
+    	if (err) console.log(err);
+  	});
 	}
 }
 

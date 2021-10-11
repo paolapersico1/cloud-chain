@@ -33041,12 +33041,12 @@
     "1337": {
       "events": {},
       "links": {},
-      "address": "0x5681495692C07a470B59b7Fb160B7a6d2CDB4A2E",
-      "transactionHash": "0x2e258c280c49b99ac94c9117dd92f6aaaf7012ede2f73e9a449a8dadb9cd0046"
+      "address": "0x3E79F0b113ea833262644A5c04c34A686330F001",
+      "transactionHash": "0xb83d032c7f51a2c71aff9d5bf3b4bc901612199009fb73dfa068bb9e253b5229"
     }
   },
   "schemaVersion": "3.4.3",
-  "updatedAt": "2021-10-06T15:10:59.141Z",
+  "updatedAt": "2021-10-11T08:15:50.422Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",
