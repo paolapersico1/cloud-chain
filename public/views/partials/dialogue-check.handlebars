@@ -1,0 +1,17 @@
+<form action="@check" method="post">
+	<div id="check" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+			<div class="modal-content">
+				<div class="modal-body">
+					<label class="form-label" for="check-filename">File name:</label>
+					<input class="form-control" type="text" name="filename" id="check-filename" required 
+					pattern='^[\w,\s-]+\.[A-Za-z]{3}$'/>
+				</div>
+				<div class="modal-footer bg-light">
+					<button type="reset" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-warning" id="check-btn">Check</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</form>

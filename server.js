@@ -136,7 +136,7 @@ truffleContract.deployed().then(function(instance) {
 	);
 	web3ContractInstance.events.UploadRequested({})
     .on('data', async function(event){
-        console.log(event.returnValues);
+        console.log("--Upload Request Received--");
         let file = event.returnValues.filepath;
         
         truffleContractInstance.UploadRequestAck(file, {from: account})
@@ -159,9 +159,11 @@ truffleContract.deployed().then(function(instance) {
 
 	 web3ContractInstance.events.DeleteRequested({})
     .on('data', async function(event){
-        console.log(event.returnValues);
+        console.log("--Delete Request Received--");
         let file = event.returnValues.filepath;
-        deleteFile(file);
+        let user = event.returnValues._from;
+        let filepath = hidePath(file, user, false);
+        deleteFile(filepath);
         
         truffleContractInstance.Delete(file, {from: account})
         .then(function(txReceipt) {
@@ -176,6 +178,7 @@ truffleContract.deployed().then(function(instance) {
 
 	web3ContractInstance.events.ReadRequested({})
     .on('data', async function(event){    
+    		console.log("--Read Request Received--");
         let file = event.returnValues.filepath;
         let user = event.returnValues._from;
         let filepath = hidePath(file, user, false);
@@ -202,7 +205,6 @@ truffleContract.deployed().then(function(instance) {
 					  console.log(err.message);
 				});
 			}).catch((err) => {
-				console.log(err);
 				truffleContractInstance.ReadRequestDeny(file, {from: account})
 		        .then(function(txReceipt) {
 		        	console.log("--ReadRequestDeny--");
@@ -253,10 +255,9 @@ function flashify(req, obj) {
 }
 
 app.all("/*", (req, res, next) => {
-	//res.locals.user = req.oidc.user;
-
 	res.filename = req.params[0];
-	res.filename = hidePath(res.filename, accounts[req.oidc.user.sub], false);
+	if(req.oidc.isAuthenticated())
+		res.filename = hidePath(res.filename, accounts[req.oidc.user.sub], false);
 	res.filename = res.filename.replace("@read", "");
 
 	let fileExists = new Promise((resolve, reject) => {
@@ -376,7 +377,7 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 					}
 					else {
 						buff = null;
-						req.flash("success", "Upload successful.");
+						//req.flash("success", "Upload successful.");
 					}
 					res.redirect("back");
 				});
@@ -396,7 +397,7 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 
 app.post("/*@mkdir", requiresAuth(), (req, res) => {
 	res.filename = req.params[0];
-	res.filename = hidePath(res.filename, accounts[req.oidc.user.sub], false);;
+	res.filename = hidePath(res.filename, accounts[req.oidc.user.sub], false);
 
 	let folder = req.body.folder;
 	if (!folder || folder.length < 1) {
@@ -508,8 +509,8 @@ function hidePath(path, userId, hide=true){
 		path = path.replace(path.substring(0, path.indexOf("/")), "mycloud");
 		return(path);
 	}
-	else
-		return  path.replace("mycloud", "storage/user" + userId);
+	else 
+		return path.replace("mycloud", "storage/user" + userId);
 }
 
 function readFile(req, res){

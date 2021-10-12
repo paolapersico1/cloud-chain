@@ -1,3 +1,4 @@
+const dotenv = require('dotenv');
 const HDWalletProvider = require("truffle-hdwallet-provider");
 const Web3 = require('Web3');
 const wsProvider = new Web3.providers.WebsocketProvider("ws://localhost:8546");
@@ -5,6 +6,7 @@ HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider);
 
 // insert the private key of the account used in metamask eg: Account 12
 // address 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
+dotenv.config();
 const privateKey = process.env.PRIVATE_KEY || "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63";
 
 module.exports = {

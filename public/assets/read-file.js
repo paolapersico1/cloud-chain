@@ -38,7 +38,7 @@ function decryptFile (e){
       $("#decrypt-msg").text("Decryption succeded.");
       $("#decrypt-msg").css( "color", "green" );
       let objectURL = URL.createObjectURL(res);
-      $('#downloadLink').attr("href", objectURL);      
+      $('#downloadLink').attr("href", objectURL);     
     })
     .catch(err => {
       $("#decrypt-msg").text("Decryption failed. Check your key.");

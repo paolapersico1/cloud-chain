@@ -67,6 +67,7 @@ contract CloudSLA {
     event Deleted(address indexed _from, string filepath);
     event ReadRequested(address indexed _from, string filepath);
     event ReadRequestAcked(address indexed _from, string filepath, string url);
+    event ReadRequestDenied(address indexed _from, string filepath, bool lostFile);
 
     constructor() {
         cloud = msg.sender;
@@ -93,7 +94,6 @@ contract CloudSLA {
         bytes32 i = Hash(filepath);
         files[i].states.push(State.uploadTransferAck);
         files[i].digests.push(digest);
-        files[i].onCloud = true;
         emit UploadTransferAcked(msg.sender, filepath, digest);
     }
     
@@ -101,6 +101,7 @@ contract CloudSLA {
         bytes32 i = Hash(filepath);
         if(ack){
             files[i].states.push(State.uploaded); 
+            files[i].onCloud = true;
         }
         else{
             files[i].states.push(State.deleteRequested);
@@ -137,7 +138,7 @@ contract CloudSLA {
     function ReadRequestDeny(string calldata filepath) external OnlyCloud FileState(filepath, State.readRequested){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.readDeny);
-        //LostFileCheck(i);
+        emit ReadRequestDenied(msg.sender, filepath, LostFileCheck(i));
     }
     
     //TODO ARBITRATOR
@@ -183,13 +184,13 @@ contract CloudSLA {
         uint operationTime;
         bool uploadedFound = false;
         bool operationFound = false;
-        for (uint j = files[ID].states.length - 1; j >= 0; j--) {
-            if(!operationFound && files[ID].states[j] == operation){
-                operationTime = j;   
+        for (uint j = files[ID].states.length; j > 0; j--) {
+            if(!operationFound && files[ID].states[j-1] == operation){
+                operationTime = j-1;   
                 operationFound = true;
             }
-            else if(!uploadedFound && files[ID].states[j] == State.uploaded){
-                uploadedTime= j;
+            else if(!uploadedFound && files[ID].states[j-1] == State.uploaded){
+                uploadedTime= j-1;
                 uploadedFound = true;
             }
             //early exit

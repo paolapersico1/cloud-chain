@@ -73,35 +73,55 @@ App = {
   listenEvents: function() {
     web3ContractInstance.events.UploadRequestAcked({})
       .on('data', async function(evt){
-          console.log(evt.returnValues);
+          console.log("--Upload Request Ack Received--");
           $("form[action='@upload']").submit();
       })
       .on('error', console.error);
 
     web3ContractInstance.events.UploadTransferAcked({})
       .on('data', async function(evt){
+          console.log("--Upload Transfer Ack Received--");
           let cloudDigest = evt.returnValues.digest;
           let file = evt.returnValues.filepath;
 
-          $(".alert-success").append("<br>Uploaded file: '<span id='uploaded-filepath'>" + file + 
-                                                          "</span>', digest: " + cloudDigest);
-          $(".alert-success").append("<br>Accept upload? ");
-          $(".alert-success").append("<button class='upload-confirm' id='yes'>Yes</button>" +
-                                     "<button class='upload-confirm' id='no'>No</button>");
+          let confirmUploadMsg = "Uploaded file: '<span id='uploaded-filepath'>" + file.replace("mycloud/", "") + 
+                                                          "</span>', digest: " + cloudDigest;
+          confirmUploadMsg = confirmUploadMsg + "<br>Accept upload? ";
+          confirmUploadMsg = confirmUploadMsg + "<button class='upload-confirm' id='yes'>Yes</button>" +
+                                     "<button class='upload-confirm' id='no'>No</button>";
+
+          localStorage.setItem('success_msg_local', confirmUploadMsg);
+          updateAlerts();
       })
       .on('error', console.error);
 
       web3ContractInstance.events.Deleted({})
       .on('data', async function(evt){
-          console.log(evt.returnValues.filepath + " has been deleted");
+          console.log("--Deleted--");
           window.location.reload();
       })
       .on('error', console.error);
 
       web3ContractInstance.events.ReadRequestAcked({})
       .on('data', async function(evt){
+          console.log("--Read Request Ack Received--");
           let url = evt.returnValues.url;
           window.location.href = url;
+      })
+      .on('error', console.error);
+
+      web3ContractInstance.events.ReadRequestDenied({})
+      .on('data', async function(evt){
+          console.log("--Read Request Denial Received--");
+          let file = evt.returnValues.filepath;
+          let lostFile = evt.returnValues.lostFile;
+          if(lostFile){
+            localStorage.setItem('warning_msg_local', "'" + file.replace("mycloud/", "") + "' has been lost.");
+            updateAlerts();
+          }else{
+            localStorage.setItem('warning_msg_local', "Client previously requested '" + file.replace("mycloud/", "") + "' deletion");
+            updateAlerts();
+          }
       })
       .on('error', console.error);
 
@@ -116,29 +136,43 @@ App = {
     $(document).on('click', "#encrypt-btn", App.encryptFile);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
     $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
+    $(document).one('submit', "form[action='@check']", App.sendReadRequest);
   },
 
   search: function(e){
     e.preventDefault();
     var searchKey = $("#searchKey").val();
-    $(".filename").each(function() {
+    $(".listitem").each(function() {
       if (!$(this).text().includes(searchKey))
         $(this).parent().parent().parent().parent().remove();
     })
+    if($('.listitem').length == 0){
+      $(".list-group-item").replaceWith("<li class='list-group-item'>No matching files</li>");
+    }
   },
 
   sendReadRequest: function(e) {
     e.preventDefault();
 
-    let filename = e.target.text;
-    var filepath = getPath() + filename;
+    if(e.type == "submit"){
+      $("#check-btn").attr('disabled', true);
+      var filename = $("#check-filename").val();
+    }else{
+      var filename = e.target.text;
+    }
+
+    let filepath = getPath() + filename;
 
     truffleContractInstance.ReadRequest(filepath, {from: App.account})
     .then(function(txReceipt) {
       console.log("--ReadRequest--");
       console.log(txReceipt);
     }).catch(function(err) {
+      $(document).one('submit', "form[action='@check']", App.sendReadRequest);
+      $("#check-btn").attr('disabled', false);
       console.log(err.message);
+      localStorage.setItem('warning_msg_local', "Transaction failed.");
+      updateAlerts();
     });
   },
 
@@ -161,8 +195,10 @@ App = {
         // Assign the DataTransfer files list to the file input
         $("#upload-file")[0].files = dataTransfer.files;
         $("#upload-file-hash").val();
-        $form.find("#encrypt-msg").text("Encryption succeded. Hash: 0x" + hash);
+        $form.find("#encrypt-msg").text("File encrypted. Hash: 0x" + hash);
         $form.find("#encrypt-msg").css( "color", "green" );
+
+        $("#upload-btn").attr('disabled', false);
       })
       .catch(err => {
           console.log(err);
@@ -179,6 +215,8 @@ App = {
   sendUploadRequest: function(e) {
     e.preventDefault();
 
+    $("#upload-btn").attr('disabled', true);
+
     const saveas = $("#upload-file-saveas").val();
     var filepath = getPath() + saveas;
 
@@ -187,12 +225,18 @@ App = {
       console.log("--UploadRequest--");
       console.log(txReceipt);
     }).catch(function(err) {
+      $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
+      $("#upload-btn").attr('disabled', false);
       console.log(err.message);
+      localStorage.setItem('warning_msg_local', "Transaction failed.");
+      updateAlerts();
     });
   },
 
   sendDeleteRequest: function(e) {
     e.preventDefault();
+
+    $("#delete-btn").attr('disabled', true);
 
     var filesToDelete = $(".multi-files-value").val();
     filesToDelete = filesToDelete.replace(/'/g, '"');
@@ -206,13 +250,17 @@ App = {
         console.log("--DeleteRequest--");
         console.log(txReceipt);
       }).catch(function(err) {
+        $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
+        $("#delete-btn").attr('disabled', false);
         console.log(err.message);
+        localStorage.setItem('warning_msg_local', "Transaction failed.");
+        updateAlerts();
       });
     });
   },
 
   sendUploadConfirm: function(e){
-    let file = $("#uploaded-filepath").text();
+    let file = "mycloud/" + $("#uploaded-filepath").text();
 
     var idClicked = e.target.id;
     let ack = null;
@@ -226,17 +274,21 @@ App = {
       .then(function(txReceipt) {
         console.log("--UploadConfirm--");
         console.log(txReceipt);
-        $(".alert-success").remove();
 
-        truffleContractInstance.GetFile.call(file)
+        window.localStorage.clear();
+        updateAlerts();
+
+        /*truffleContractInstance.GetFile.call(file)
         .then(function (uploadedFile) { 
           console.log(utils.describeFileTx(uploadedFile));
         }).catch(function(err) {
           console.log(err.message);
-        });
+        });*/
 
       }).catch(function(err) {
         console.log(err.message);
+        localStorage.setItem('warning_msg_local', "Transaction failed.");
+        updateAlerts();
       })
   }
 };
@@ -260,8 +312,34 @@ ethereum.on('chainChanged', (chainId) => {
   window.location.reload();
 });
 
+function updateAlerts(){
+  if (localStorage.getItem("success_msg_local") != null) {
+      $("#successDiv").empty().append(localStorage.getItem("success_msg_local"));
+      $("#successDiv").css('display', 'inline-block');
+  }
+  else{
+      $("#successDiv").css('display', 'none');
+  }
+
+  if (localStorage.getItem("error_msg_local") != null) {
+      $("#errorDiv").empty().append(localStorage.getItem("error_msg_local"));
+      $("#errorDiv").css('display', 'inline-block');
+  }else{
+      $("#errorDiv").css('display', 'none');
+  }
+
+  if (localStorage.getItem("warning_msg_local") != null) {
+      $("#warnDiv").empty().append(localStorage.getItem("warning_msg_local"));
+      $("#warnDiv").css('display', 'inline-block');
+      localStorage.removeItem("warning_msg_local");
+  }else{
+      $("#warnDiv").css('display', 'none');
+  }
+}
+
 $(function() {
   $(window).load(function() {
+    updateAlerts();
     App.init();
   });
 });

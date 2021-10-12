@@ -6,6 +6,8 @@ const $file = $("#upload-file");
 $(".upload-unhide").fadeOut();
 
 $file.on("change", () => {
+	$("#upload-btn").attr('disabled', false);
+
 	$form.find("#encrypt-msg").empty();
 	const file = $file[0].files[0];
 	const fnElement = $file.parent().find(".custom-file-label");

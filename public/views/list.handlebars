@@ -17,6 +17,11 @@
 						{{success}}
 					</div>
 				{{/each}}
+				<div class = "alertMessage">
+				    <span class="alert alert-success containerMargins" id="successDiv" style="display:none"></span>
+				    <span class="alert alert-danger containerMargins" id="errorDiv" style="display:none"></span>
+				    <span class="alert alert-warning containerMargins" id="warnDiv" style="display:none"></span>
+				</div> 
 				{{#if files}}
 				<ul class="list-group">
 					<li class="list-group-item">
@@ -40,16 +45,16 @@
 								{{/unless}}
 								<div class="form-check-label row">
 									{{#if isdirectory}}
-										<a href="./{{name}}/" class="name col-md-2">{{name}}/</a>
+										<a href="./{{name}}/" class="name col-md-2 listitem">{{name}}/</a>
 										<div class="col-md-2">-</div>
 										<div class="col-md-2">-</div>
 										<div class="col-md-6">-</div>
 									{{else}}
 									{{#if error}}
-										<a class="name col-md-3" title="{{error}}">{{name}}/</a>
+										<a class="name col-md-3 listitem" title="{{error}}">{{name}}/</a>
 										<span class="badge rounded-pill bg-danger badge-alignment col-md-9">err</span>
 									{{else}}
-										<a href="./{{name}}/" class="filename name col-md-2">{{name}}</a>
+										<a href="./{{name}}/" class="filename name col-md-2 listitem">{{name}}</a>
 										<div class="col-md-2">{{filesize size}}</div>
 										<div class="col-md-2">{{dateadded}}</div>
 										<div class="col-md-6" style="word-wrap: break-word">{{digest}}</div>
@@ -72,6 +77,10 @@
 				{{/if}}	
 				</ul>
 			</div>
+			<div style="padding-top: 56px;">
+				<span>Missing file? </span>
+				<button id="lostFile" data-bs-toggle="modal" data-bs-target="#check">Blockchain check</a>
+			</div>
 		</div>
 	</main>
 </div>
@@ -80,3 +89,4 @@
 {{> dialogue-mkdir}}
 {{> dialogue-download}}
 {{> dialogue-delete}}
+{{> dialogue-check}}
