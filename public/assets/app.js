@@ -63,7 +63,15 @@ App = {
             CloudSLAArtifact.abi,
             truffleContractInstance.address,
         );
-        return App.listenEvents();
+        $.getJSON('/build/contracts/FileDigestOracle.json', function(data) {
+          // Get the necessary contract artifact file and instantiate it with @truffle/contract
+          var FileDigestOracleArtifact = data;
+          web3OracleContractInstance = new web3WebSocket.eth.Contract(
+            FileDigestOracleArtifact.abi,
+            "0x0a143BDF026Eabaf95d3E88AbB88169674Db92f5",
+          );
+          return App.listenEvents();
+        });
       }).catch(function(err) {
         console.log(err.message);
       });
@@ -106,7 +114,8 @@ App = {
       .on('data', async function(evt){
           console.log("--Read Request Ack Received--");
           let url = evt.returnValues.url;
-          window.location.href = url;
+          //go to decryption page instead of reading the file directly
+          window.location.href = url + "@read";
       })
       .on('error', console.error);
 
@@ -125,6 +134,38 @@ App = {
       })
       .on('error', console.error);
 
+      web3ContractInstance.events.CorruptedFileChecked({})
+      .on('data', async function(evt){
+          console.log("--Corrupted File Check Result Received--");
+          let digestOK = evt.returnValues.digestOK;
+          let filepath = evt.returnValues.filepath;
+          if(!digestOK){
+            localStorage.setItem('warning_msg_local', "'" + filepath.replace("mycloud/", "") + "' has been corrupted.");
+            updateAlerts();
+          }else{
+            localStorage.setItem('warning_msg_local', "'" + filepath.replace("mycloud/", "") + "' has NOT been corrupted.");
+            updateAlerts();
+          }
+      })
+      .on('error', console.error);
+
+      web3OracleContractInstance.events.DigestComputed({})
+      .on('data', async function(evt){
+          console.log("--Digest Computed Received--");
+          let filepath = getPath(evt.returnValues.url);
+
+          truffleContractInstance.CorruptedFileCheck(filepath, {from: App.account})
+          .then(function(txReceipt) {
+            console.log("--CorruptedFileCheck--");
+            console.log(txReceipt);
+          }).catch(function(err) {
+            console.log(err.message);
+            localStorage.setItem('warning_msg_local', "Transaction failed.");
+            updateAlerts();
+          });
+      })
+      .on('error', console.error);
+
     return App.bindEvents();
   },
 
@@ -134,6 +175,7 @@ App = {
     $(document).on('click', '.filename', App.sendReadRequest);
     $(document).on('click', '.upload-confirm', App.sendUploadConfirm);
     $(document).on('click', "#encrypt-btn", App.encryptFile);
+    $(document).on('click', "#corruptedFileCheck", App.corruptedFileCheck);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
     $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
     $(document).one('submit', "form[action='@check']", App.sendReadRequest);
@@ -149,6 +191,25 @@ App = {
     if($('.listitem').length == 0){
       $(".list-group-item").replaceWith("<li class='list-group-item'>No matching files</li>");
     }
+  },
+
+  corruptedFileCheck: function(e) {
+    e.preventDefault();
+
+    let filepath = getPath(readUrl=decodeURI(window.location.href));
+
+    //console.log(filepath);
+    truffleContractInstance.CorruptedFileCheckRequest(filepath, {from: App.account})
+    .then(function(txReceipt) {
+      console.log("--CorruptedFileCheck Request--");
+      console.log(txReceipt);
+    }).catch(function(err) {
+      $(document).one('submit', "form[action='@check']", App.sendReadRequest);
+      $("#check-btn").attr('disabled', false);
+      console.log(err.message);
+      localStorage.setItem('warning_msg_local', "Transaction failed.");
+      updateAlerts();
+    });
   },
 
   sendReadRequest: function(e) {
@@ -293,10 +354,20 @@ App = {
   }
 };
 
-function getPath(){
+function getPath(readUrl=null){
   let pattern = "mycloud/";
-  let dir = window.location.href.slice(window.location.href.indexOf(pattern) + pattern.length);
-  return pattern + dir;
+  let path = null;
+
+  if(readUrl){
+    readUrl = readUrl.replace("@read", "");
+    let regex = /user[\w]*\/(.*)/g;
+    path = regex.exec(readUrl)[1];
+  }else{
+    let decodedUrl = decodeURI(window.location.href);
+    path = decodedUrl.slice(decodedUrl.indexOf(pattern) + pattern.length);
+  }
+
+  return pattern + path;
 }
 
 ethereum.on('accountsChanged', (accounts) => {

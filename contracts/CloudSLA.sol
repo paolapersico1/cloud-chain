@@ -7,6 +7,7 @@ pragma experimental ABIEncoderV2;
  * @dev 
  */
 contract CloudSLA {
+    address private oracle = 0x0a143BDF026Eabaf95d3E88AbB88169674Db92f5;
     address private user = 0x627306090abaB3A6e1400e9345bC60c78a8BEf57;
     address private cloud;
     
@@ -68,14 +69,15 @@ contract CloudSLA {
     event ReadRequested(address indexed _from, string filepath);
     event ReadRequestAcked(address indexed _from, string filepath, string url);
     event ReadRequestDenied(address indexed _from, string filepath, bool lostFile);
+    event CorruptedFileChecked(address indexed _from, string filepath, bool digestOK);
 
     constructor() {
         cloud = msg.sender;
     }
     
-    function SetUser(address _user) external OnlyCloud{
+    /*function SetUser(address _user) external OnlyCloud{
         user = _user;
-    }
+    }*/
     
     function UploadRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, false){
         bytes32 i = Hash(filepath);
@@ -156,14 +158,15 @@ contract CloudSLA {
         return(res);    
     }
     
-    function CorruptedFileCheck(string calldata filepath) external view returns(bool){
+    function CorruptedFileCheckRequest(string calldata filepath) external FileInBC(filepath){
         bytes32 i = Hash(filepath);
-        bool res = false;
-        if(!OperationAfterUpload(i, State.deleteRequested)){
-            //TODO Compensate();
-            res = true;
-        }
-        return(res);    
+        FileDigestOracle(oracle).DigestRequest(files[i].url);  
+    }
+
+    function CorruptedFileCheck(string calldata filepath) external FileInBC(filepath){
+        bytes32 i = Hash(filepath);
+        bool res = (files[i].digests[files[i].digests.length - 1] == FileDigestOracle(oracle).DigestRetrieve(files[i].url));  
+        emit CorruptedFileChecked(msg.sender, filepath, res);
     }
     
     /*
@@ -200,4 +203,9 @@ contract CloudSLA {
         return(operationFound && operationTime > uploadedTime);
     }
     
+}
+
+interface FileDigestOracle {
+    function DigestRequest(string calldata url) external;
+    function DigestRetrieve(string calldata url) external view returns(bytes32);
 }

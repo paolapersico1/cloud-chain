@@ -1,8 +1,9 @@
-let filepath = window.location.href;
+let filepath = decodeURI(window.location.href);
 let filename = filepath.substring(
     filepath.lastIndexOf("/") + 1, 
     filepath.lastIndexOf("@")
 );
+
 $('#downloadLink').attr("download", filename);
 let cipherbyes = null;
 

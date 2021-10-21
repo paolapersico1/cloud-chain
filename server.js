@@ -40,14 +40,15 @@ const srcdir =  path.join(__dirname, "public");
 
 dotenv.config();
 const options = {
-  key: fs.readFileSync( "cloudchain.com+3-key.pem", "utf-8"),
-  cert: fs.readFileSync("cloudchain.com+3.pem", "utf-8"),
+  key: fs.readFileSync( "cloudchain.com+4-key.pem", "utf-8"),
+  cert: fs.readFileSync("cloudchain.com+4.pem", "utf-8"),
 };
 
 const app = express();
 const port = process.env.PORT || 443;
 const hostname = process.env.ISSUER_BASE_URL || "https://cloudchain.com";
 https.createServer(options, app).listen(port);
+//https.globalAgent.options.ca = require('ssl-root-cas').create();
 
 const httpApp = express();
 const http = require('http');
@@ -196,7 +197,6 @@ truffleContract.deployed().then(function(instance) {
 			fileExists.then((stats) => {
 				let url = hostname + ":" + port + "/" + filepath;
 				url = url.replace("\\", "/");
-				url = url + "@read";
 				truffleContractInstance.ReadRequestAck(file, url, {from: account})
 		        .then(function(txReceipt) {
 		        	console.log("--ReadRequestAck--");
@@ -286,7 +286,7 @@ app.get("/", (req, res) => {
 		res.render("list", {notloggedin: true});
 })
 
-app.get("/build/contracts/CloudSLA.json", readFile);
+app.get("/build/contracts/*", readFile);
 app.get("/mycloud*", requiresAuth(), readDirOrFile);
 app.get("/*@read", (req, res) => {
 	if (res.stats.error) {
