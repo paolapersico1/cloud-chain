@@ -45,7 +45,7 @@
 								{{/unless}}
 								<div class="form-check-label row">
 									{{#if isdirectory}}
-										<a href="./{{name}}/" class="name col-md-2 listitem">{{name}}/</a>
+										<a href="{{name}}" class="name col-md-2 listitem">{{name}}/</a>
 										<div class="col-md-2">-</div>
 										<div class="col-md-2">-</div>
 										<div class="col-md-6">-</div>
@@ -54,7 +54,7 @@
 										<a class="name col-md-3 listitem" title="{{error}}">{{name}}/</a>
 										<span class="badge rounded-pill bg-danger badge-alignment col-md-9">err</span>
 									{{else}}
-										<a href="./{{name}}/" class="filename name col-md-2 listitem">{{name}}</a>
+										<a href="" class="filename name col-md-2 listitem">{{name}}</a>
 										<div class="col-md-2">{{filesize size}}</div>
 										<div class="col-md-2">{{dateadded}}</div>
 										<div class="col-md-6" style="word-wrap: break-word">{{digest}}</div>

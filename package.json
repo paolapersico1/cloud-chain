@@ -32,6 +32,7 @@
     "express-session": "^1.17.2",
     "filesize": "^8.0.0",
     "handlebars": "^4.7.7",
+    "node-schedule": "^2.0.0",
     "notp": "^2.0.3",
     "octicons": "^8.5.0",
     "rimraf": "^3.0.2",

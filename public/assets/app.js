@@ -44,7 +44,7 @@ App = {
       }
       App.account = accounts[0];
       $('#account').empty();
-      $('#account').append(App.account);
+      $('#account').append("<b>Account:</b> " + App.account);
     });
 
     return App.initContract();
@@ -63,12 +63,40 @@ App = {
             CloudSLAArtifact.abi,
             truffleContractInstance.address,
         );
-        $.getJSON('/build/contracts/FileDigestOracle.json', function(data) {
-          // Get the necessary contract artifact file and instantiate it with @truffle/contract
+
+        truffleContractInstance.GetSLAInfo.call()
+        .then(function (res) { 
+          //if it was not paid
+          if(!res[0]){
+            localStorage.setItem('warning_msg_local', "Please activate your smart contract.");
+            updateAlerts();
+          //if it is paid and the validity period has ended
+          }else if(Date.now() > new Date(res[2]*1000)){
+            localStorage.setItem('warning_msg_local', "Please request smart contract termination.");
+            updateAlerts();
+            //end sla in place of cloud
+            truffleContractInstance.EndSla({from: App.account})
+              .then(function(txReceipt) {
+                console.log("--SLA ended--");
+                //console.log(txReceipt);
+              }).catch(function(err) {
+                console.log(err.message);
+              });
+          }else{
+            $('#credits').empty();
+            $('#credits').append("Credits: " + res[3]); 
+            $('#endDate').empty();
+            $('#endDate').append("Valid until: " + new Date(res[2]*1000).toLocaleString('en-GB')); 
+          }
+        }).catch(function(err) {
+          console.log(err.message);
+        });
+
+        $.getJSON('http://localhost:3001/build/contracts/FileDigestOracle.json', function(data) {
           var FileDigestOracleArtifact = data;
           web3OracleContractInstance = new web3WebSocket.eth.Contract(
             FileDigestOracleArtifact.abi,
-            "0x0a143BDF026Eabaf95d3E88AbB88169674Db92f5",
+            "0x9e699d6c7ccf183F0B09675A9E867d1486EEF85b",
           );
           return App.listenEvents();
         });
@@ -79,6 +107,28 @@ App = {
   },
 
   listenEvents: function() {
+    web3ContractInstance.events.Paid({})
+      .on('data', async function(evt){
+        localStorage.removeItem('warning_msg_local');
+        updateAlerts();
+        $('#credits').empty();
+        $('#credits').append("<b>Credits:</b> 0 wei"); 
+        $('#endDate').empty();
+        $('#endDate').append("<b>Valid until:</b> " + new Date(evt.returnValues.endTime*1000).toLocaleString('en-GB'));
+      })
+      .on('error', console.error);
+
+    web3ContractInstance.events.CompensatedUser({})
+      .on('data', async function(evt){
+        let value = evt.returnValues.value;
+
+        localStorage.setItem('warning_msg_local', "Your account was compensated " + value + " wei for SLA violations.");
+        updateAlerts();
+
+        App.updateCredits();
+      })
+      .on('error', console.error);
+
     web3ContractInstance.events.UploadRequestAcked({})
       .on('data', async function(evt){
           console.log("--Upload Request Ack Received--");
@@ -127,6 +177,7 @@ App = {
           if(lostFile){
             localStorage.setItem('warning_msg_local', "'" + file.replace("mycloud/", "") + "' has been lost.");
             updateAlerts();
+            App.updateCredits();
           }else{
             localStorage.setItem('warning_msg_local', "Client previously requested '" + file.replace("mycloud/", "") + "' deletion");
             updateAlerts();
@@ -134,18 +185,15 @@ App = {
       })
       .on('error', console.error);
 
-      web3ContractInstance.events.CorruptedFileChecked({})
+      web3ContractInstance.events.FileChecked({})
       .on('data', async function(evt){
-          console.log("--Corrupted File Check Result Received--");
-          let digestOK = evt.returnValues.digestOK;
+          console.log("--File Check Result Received--");
+          let msg = evt.returnValues.msg;
           let filepath = evt.returnValues.filepath;
-          if(!digestOK){
-            localStorage.setItem('warning_msg_local', "'" + filepath.replace("mycloud/", "") + "' has been corrupted.");
-            updateAlerts();
-          }else{
-            localStorage.setItem('warning_msg_local', "'" + filepath.replace("mycloud/", "") + "' has NOT been corrupted.");
-            updateAlerts();
-          }
+          localStorage.setItem('warning_msg_local', msg);
+          updateAlerts();
+          App.updateCredits();
+          $("#filecheck").attr('disabled', false);
       })
       .on('error', console.error);
 
@@ -154,7 +202,7 @@ App = {
           console.log("--Digest Computed Received--");
           let filepath = getPath(evt.returnValues.url);
 
-          truffleContractInstance.CorruptedFileCheck(filepath, {from: App.account})
+          truffleContractInstance.FileCheck(filepath, {from: App.account})
           .then(function(txReceipt) {
             console.log("--CorruptedFileCheck--");
             console.log(txReceipt);
@@ -171,14 +219,25 @@ App = {
 
   bindEvents: function() {
     $(document).on('click', '#connect', App.initWeb3);
+    $(document).on('click', '#activate', App.activate);
     $(document).on('submit', "form[action='@search']", App.search);
     $(document).on('click', '.filename', App.sendReadRequest);
     $(document).on('click', '.upload-confirm', App.sendUploadConfirm);
     $(document).on('click', "#encrypt-btn", App.encryptFile);
-    $(document).on('click', "#corruptedFileCheck", App.corruptedFileCheck);
+    $(document).on('click', "#filecheck", App.fileCheck);
     $(document).one('submit', "form[action='@upload']", App.sendUploadRequest);
     $(document).one('submit', "form[action='@delete']", App.sendDeleteRequest);
     $(document).one('submit', "form[action='@check']", App.sendReadRequest);
+  },
+
+  updateCredits: function(){
+    truffleContractInstance.GetSLAInfo.call()
+      .then(function (res) { 
+        $('#credits').empty();
+        $('#credits').append("<b>Credits:</b> " + res[3] + " wei"); 
+      }).catch(function(err) {
+        console.log(err.message);
+      });
   },
 
   search: function(e){
@@ -193,19 +252,33 @@ App = {
     }
   },
 
-  corruptedFileCheck: function(e) {
+  activate: function(e) {
     e.preventDefault();
+
+    truffleContractInstance.Deposit({from: App.account, value: web3.utils.toWei("5", "ether")})
+    .then(function(txReceipt) {
+      console.log("--SC Activated--");
+      //console.log(txReceipt);
+    }).catch(function(err) {
+      console.log(err.message);
+      localStorage.setItem('warning_msg_local', "Transaction failed.");
+      updateAlerts();
+    });
+  },
+
+  fileCheck: function(e) {
+    e.preventDefault();
+    $("#filecheck").attr('disabled', true);
 
     let filepath = getPath(readUrl=decodeURI(window.location.href));
 
     //console.log(filepath);
-    truffleContractInstance.CorruptedFileCheckRequest(filepath, {from: App.account})
+    truffleContractInstance.FileHashRequest(filepath, {from: App.account})
     .then(function(txReceipt) {
-      console.log("--CorruptedFileCheck Request--");
+      console.log("--File Hash Request--");
       console.log(txReceipt);
     }).catch(function(err) {
-      $(document).one('submit', "form[action='@check']", App.sendReadRequest);
-      $("#check-btn").attr('disabled', false);
+      $(document).on('click', "#filecheck", App.fileCheck);
       console.log(err.message);
       localStorage.setItem('warning_msg_local', "Transaction failed.");
       updateAlerts();

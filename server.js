@@ -12,6 +12,7 @@ const busboy = require("connect-busboy");
 const flash = require("connect-flash");
 const querystring = require("querystring");
 const dotenv = require('dotenv');
+const schedule = require('node-schedule');
 
 const archiver = require("archiver");
 
@@ -135,6 +136,25 @@ truffleContract.deployed().then(function(instance) {
 	    CloudSLAArtifact.abi,
 	    truffleContractInstance.address,
 	);
+
+	web3ContractInstance.events.Paid({})
+    .on('data', async function(event){
+        console.log("--SC Activated--");
+        let user = event.returnValues._from;
+        let endTime = parseInt(event.returnValues.endTime) + 1;
+        const date = new Date(endTime * 1000);
+        const job = schedule.scheduleJob(date, function(){
+				  truffleContractInstance.EndSla({from: account})
+		      .then(function(txReceipt) {
+		      	console.log("--SLA ended--");
+			      //console.log(txReceipt);
+			    }).catch(function(err) {
+					  console.log(err.message);
+					});
+				});
+    })
+	  .on('error', console.error);
+
 	web3ContractInstance.events.UploadRequested({})
     .on('data', async function(event){
         console.log("--Upload Request Received--");
@@ -158,63 +178,63 @@ truffleContract.deployed().then(function(instance) {
     })
 	  .on('error', console.error);
 
-	 web3ContractInstance.events.DeleteRequested({})
-    .on('data', async function(event){
-        console.log("--Delete Request Received--");
-        let file = event.returnValues.filepath;
-        let user = event.returnValues._from;
-        let filepath = hidePath(file, user, false);
-        deleteFile(filepath);
-        
-        truffleContractInstance.Delete(file, {from: account})
-        .then(function(txReceipt) {
-        	console.log("--Delete--");
-		      console.log(txReceipt);
+ web3ContractInstance.events.DeleteRequested({})
+  .on('data', async function(event){
+      console.log("--Delete Request Received--");
+      let file = event.returnValues.filepath;
+      let user = event.returnValues._from;
+      let filepath = hidePath(file, user, false);
+      deleteFile(filepath);
+      
+      truffleContractInstance.Delete(file, {from: account})
+      .then(function(txReceipt) {
+      	console.log("--Delete--");
+	      console.log(txReceipt);
 
+	    }).catch(function(err) {
+			  console.log(err.message);
+			});
+  })
+  .on('error', console.error);
+
+web3ContractInstance.events.ReadRequested({})
+  .on('data', async function(event){    
+  		console.log("--Read Request Received--");
+      let file = event.returnValues.filepath;
+      let user = event.returnValues._from;
+      let filepath = hidePath(file, user, false);
+
+      let fileExists = new Promise((resolve, reject) => {
+			// check if file exists
+			fs.stat(relative(filepath), (err, stats) => {
+				if (err) {
+					return reject(err);
+				}
+				return resolve(stats);
+			});
+		});
+
+		fileExists.then((stats) => {
+			let url = hostname + ":" + port + "/" + filepath;
+			url = url.replace("\\", "/");
+			truffleContractInstance.ReadRequestAck(file, url, {from: account})
+	        .then(function(txReceipt) {
+	        	console.log("--ReadRequestAck--");
+			      console.log(txReceipt);
 		    }).catch(function(err) {
 				  console.log(err.message);
-				});
-    })
-	  .on('error', console.error);
-
-	web3ContractInstance.events.ReadRequested({})
-    .on('data', async function(event){    
-    		console.log("--Read Request Received--");
-        let file = event.returnValues.filepath;
-        let user = event.returnValues._from;
-        let filepath = hidePath(file, user, false);
-
-        let fileExists = new Promise((resolve, reject) => {
-				// check if file exists
-				fs.stat(relative(filepath), (err, stats) => {
-					if (err) {
-						return reject(err);
-					}
-					return resolve(stats);
-				});
 			});
-
-			fileExists.then((stats) => {
-				let url = hostname + ":" + port + "/" + filepath;
-				url = url.replace("\\", "/");
-				truffleContractInstance.ReadRequestAck(file, url, {from: account})
-		        .then(function(txReceipt) {
-		        	console.log("--ReadRequestAck--");
-				      console.log(txReceipt);
-			    }).catch(function(err) {
-					  console.log(err.message);
-				});
-			}).catch((err) => {
-				truffleContractInstance.ReadRequestDeny(file, {from: account})
-		        .then(function(txReceipt) {
-		        	console.log("--ReadRequestDeny--");
-				      console.log(txReceipt);
-			    }).catch(function(err) {
-					  console.log(err.message);
-				});
+		}).catch((err) => {
+			truffleContractInstance.ReadRequestDeny(file, {from: account})
+	        .then(function(txReceipt) {
+	        	console.log("--ReadRequestDeny--");
+			      console.log(txReceipt);
+		    }).catch(function(err) {
+				  console.log(err.message);
 			});
-    })
-	  .on('error', console.error);
+		});
+  })
+  .on('error', console.error);
 
 }).catch(function(err) {
   console.log(err.message);
@@ -335,21 +355,32 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 			res.redirect("back");
 		}
 		else{
-			let fileExists = new Promise((resolve, reject) => {
+			let fileCanBeUploaded = new Promise((resolve, reject) => {
+				if(truffleContractInstance){
+					let url = req.path.slice(1, req.path.indexOf("@upload"));
+					let filepath = url + saveas;
+					truffleContractInstance.GetFile.call(filepath)
+			      	.then(function (res) { 
+				      	return resolve(res);
+				      }).catch(function(err) {
+							  return reject("File can't be uploaded as it is not in the Blockchain.");
+							});
+				}else{
+					return reject("Server contract error.");
+				}
+			});
+
+			let fileNotExist = new Promise((resolve, reject) => {
 				// check if file exists
 				fs.stat(relative(res.filename, saveas), (err, stats) => {
 					if (err) {
-						return reject(err);
+						return resolve(err);
 					}
-					return resolve(stats);
+					return reject("File exists, cannot overwrite. ");
 				});
 			});
 
-			fileExists.then((stats) => {
-				console.warn("file exists, cannot overwrite");
-				req.flash("error", "File exists, cannot overwrite. ");
-				res.redirect("back");
-			}).catch((err) => {
+			Promise.all([fileCanBeUploaded, fileNotExist]).then((msg) => {
 				const saveName = relative(res.filename, saveas);
 				console.log("saving file to " + saveName);
 				let save = fs.createWriteStream(saveName);
@@ -387,7 +418,11 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 					res.redirect("back");
 				});
 				save.write(buff);
-				save.end();
+				save.end();	
+			}).catch((err) => {
+				console.warn(err);
+				req.flash("error", err);
+				res.redirect("back");
 			});
 		}
 		

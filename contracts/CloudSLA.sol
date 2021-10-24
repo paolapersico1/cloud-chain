@@ -7,31 +7,40 @@ pragma experimental ABIEncoderV2;
  * @dev 
  */
 contract CloudSLA {
-    address private oracle = 0x0a143BDF026Eabaf95d3E88AbB88169674Db92f5;
-    address private user = 0x627306090abaB3A6e1400e9345bC60c78a8BEf57;
+    address private oracle = 0x9e699d6c7ccf183F0B09675A9E867d1486EEF85b;
+    address private user;
     address private cloud;
     
-    /*struct Sla{
-        uint price;
+    struct Period{
+        uint startTime;
+        uint endTime;
+    }
+    
+    enum Violation {lostFile, undeletedFile}
+    
+    struct Sla{
         bool paid;
-        uint violationCount;
-        uint monitoringPeriod;
-    }*/
+        Period validityPeriod;
+        uint credits;
+    }
     
     enum State {defaultValue, uploadRequested, uploadRequestAck, uploadTransferAck, uploaded, 
-                deleteRequested, deleted, readRequested, readRequestAck, readDeny }
-
+                deleteRequested, deleted, readRequested, readRequestAck, readDeny, checkRequested}
+                
     struct File {
         bytes32 ID;         //hash of filepath
         bool onCloud;
         State[] states;   
-        bytes32[] digests;     //hash of last content
-        string url;         //hash of last url
+        bytes32[] digests;  //hashes of content
+        string url;         //last url
     }
     
-    //Sla private sla;
-    mapping ( bytes32 => File ) private files;
-    
+    mapping ( bytes32 => File ) private files;  
+    uint price;
+    mapping (Violation => uint) violationCredits;
+    uint validityDuration;
+    Sla private currentSLA;
+   
     
     function Hash(string memory str) private pure returns(bytes32){
         return (sha256(abi.encodePacked(str)));
@@ -39,6 +48,8 @@ contract CloudSLA {
     
     modifier OnlyUser {require (msg.sender == user, "OnlyUser"); _;}
     modifier OnlyCloud {require (msg.sender == cloud, "OnlyCloud"); _;}
+    modifier OnlyUserOrCloud{ require ((msg.sender == user || msg.sender == cloud), "OnlyUserOrCloud");  _;}
+    
     modifier FileInBC (string memory filepath) {
         bytes32 i = Hash(filepath);
         require (i != 0x0 && files[i].ID != 0x0, "FileInBC");
@@ -47,12 +58,21 @@ contract CloudSLA {
     modifier FileOnCloud (string memory filepath, bool onCloud) {
         bytes32 i = Hash(filepath);
         bool inBC = files[i].ID != 0x0;
-        if (onCloud)
+        if (onCloud){
             require (i != 0x0 && inBC && files[i].onCloud, "FileOnCloud");
+        }
         else
             require (! inBC ||  ! files[i].onCloud, "FileNotOnCloud");
         _;
     }
+
+    modifier NotBeingChecked(string memory filepath) {
+        bytes32 i = Hash(filepath);
+        bool inBC = files[i].ID != 0x0;
+        require (!inBC || (files[i].states[files[i].states.length - 1] != State.checkRequested));
+        _;
+    }
+
     modifier FileState (string memory filepath, State prevState) {
         bytes32 i = Hash(filepath);
         bool inBC = files[i].ID != 0x0;
@@ -61,6 +81,26 @@ contract CloudSLA {
         _;
     }
     
+    modifier IsSLAValid(){
+        require(block.timestamp >= currentSLA.validityPeriod.startTime && block.timestamp <= currentSLA.validityPeriod.endTime, 
+                "SLAValidity");
+        _;
+    }
+    
+    modifier Activatable(uint sentValue){
+        require(!currentSLA.paid && sentValue == price, "Activatable");
+        _;
+    }
+    
+    modifier ValidityPeriodEnded(){
+        require(block.timestamp >= currentSLA.validityPeriod.endTime, 
+                "ValidityPeriodEnded");
+        _;
+    }
+    
+    event Paid(address indexed _from, uint endTime, uint depositedValue);
+    event CompensatedUser(address indexed _user, uint value);
+    event PaidCloudProvider(address indexed _cloud, uint value);
     event UploadRequested(address indexed _from, string filepath);
     event UploadRequestAcked(address indexed _from, string filepath);
     event UploadTransferAcked(address indexed _from, string filepath, bytes32 digest);
@@ -69,37 +109,63 @@ contract CloudSLA {
     event ReadRequested(address indexed _from, string filepath);
     event ReadRequestAcked(address indexed _from, string filepath, string url);
     event ReadRequestDenied(address indexed _from, string filepath, bool lostFile);
-    event CorruptedFileChecked(address indexed _from, string filepath, bool digestOK);
+    event FileChecked(address indexed _from, string filepath, string msg);
 
-    constructor() {
+    constructor (address _user, uint _price, uint _validityDuration, uint lostFileCredits, uint undeletedFileCredits) {
         cloud = msg.sender;
+        user = _user;
+        price = _price;
+        validityDuration = _validityDuration;
+        violationCredits[Violation.lostFile] = lostFileCredits;
+        violationCredits[Violation.undeletedFile] = undeletedFileCredits;
     }
     
-    /*function SetUser(address _user) external OnlyCloud{
-        user = _user;
-    }*/
+    function Deposit() external payable OnlyUser Activatable(msg.value){
+        currentSLA.paid = true;
+        currentSLA.validityPeriod.startTime = block.timestamp;
+        currentSLA.validityPeriod.endTime =  block.timestamp + validityDuration;
+        emit Paid(msg.sender, currentSLA.validityPeriod.endTime, msg.value);
+    }
     
-    function UploadRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, false){
+    function EndSla() external OnlyUserOrCloud ValidityPeriodEnded {
+        CompensateUser();
+        PayCloudProvider();
+        delete currentSLA;
+    }
+    
+    function CompensateUser() internal {
+        uint value = currentSLA.credits < price ? currentSLA.credits : price;
+        payable(user).transfer(value);
+        emit CompensatedUser(user, value);
+    }
+    
+    function PayCloudProvider() internal{
+        uint value = address(this).balance;
+        payable(cloud).transfer(value);
+        emit PaidCloudProvider(cloud, value);
+    }
+    
+    function UploadRequest(string calldata filepath) external OnlyUser IsSLAValid FileOnCloud(filepath, false) NotBeingChecked(filepath){
         bytes32 i = Hash(filepath);
         files[i].ID = i;
         files[i].states.push(State.uploadRequested);
         emit UploadRequested(msg.sender, filepath);
     }
     
-    function UploadRequestAck(string calldata filepath) external OnlyCloud FileState(filepath, State.uploadRequested){
+    function UploadRequestAck(string calldata filepath) external OnlyCloud IsSLAValid FileState(filepath, State.uploadRequested){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.uploadRequestAck);
         emit UploadRequestAcked(msg.sender, filepath);
     }
     
-    function UploadTransferAck(string calldata filepath, bytes32 digest) external OnlyCloud FileState(filepath, State.uploadRequestAck){
+    function UploadTransferAck(string calldata filepath, bytes32 digest) external OnlyCloud IsSLAValid FileState(filepath, State.uploadRequestAck){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.uploadTransferAck);
         files[i].digests.push(digest);
         emit UploadTransferAcked(msg.sender, filepath, digest);
     }
     
-    function UploadConfirm(string calldata filepath, bool ack) external OnlyUser FileState(filepath, State.uploadTransferAck){
+    function UploadConfirm(string calldata filepath, bool ack) external OnlyUser IsSLAValid FileState(filepath, State.uploadTransferAck){
         bytes32 i = Hash(filepath);
         if(ack){
             files[i].states.push(State.uploaded); 
@@ -111,74 +177,69 @@ contract CloudSLA {
         }
     }
     
-    function DeleteRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, true){
+    function DeleteRequest(string calldata filepath) external OnlyUser IsSLAValid FileOnCloud(filepath, true) NotBeingChecked(filepath){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.deleteRequested);
         emit DeleteRequested(msg.sender, filepath);
     }
     
-    function Delete(string calldata filepath) external OnlyCloud FileState(filepath, State.deleteRequested){
+    function Delete(string calldata filepath) external OnlyCloud IsSLAValid FileState(filepath, State.deleteRequested){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.deleted);
         files[i].onCloud = false;
         emit Deleted(msg.sender, filepath);
     }
     
-    function ReadRequest(string calldata filepath) external OnlyUser FileOnCloud(filepath, true){
+    function ReadRequest(string calldata filepath) external OnlyUser IsSLAValid FileOnCloud(filepath, true) NotBeingChecked(filepath){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.readRequested);
         emit ReadRequested(msg.sender, filepath);
     }
     
-    function ReadRequestAck(string calldata filepath, string calldata url) external OnlyCloud FileState(filepath, State.readRequested){
+    function ReadRequestAck(string calldata filepath, string calldata url) external OnlyCloud IsSLAValid FileState(filepath, State.readRequested){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.readRequestAck);
         files[i].url = url;
         emit ReadRequestAcked(msg.sender, filepath, url);
     }
     
-    function ReadRequestDeny(string calldata filepath) external OnlyCloud FileState(filepath, State.readRequested){
+    function ReadRequestDeny(string calldata filepath) external OnlyCloud IsSLAValid FileState(filepath, State.readRequested){
         bytes32 i = Hash(filepath);
         files[i].states.push(State.readDeny);
         emit ReadRequestDenied(msg.sender, filepath, LostFileCheck(i));
     }
     
-    //TODO ARBITRATOR
-    function GetFile(string memory filepath) public view FileInBC(filepath) returns(bytes32, State [] memory, bool, bytes32 [] memory, string memory){
-        bytes32 i = Hash(filepath);
-        return (files[i].ID, files[i].states, files[i].onCloud, files[i].digests, files[i].url);
-    }
-    
-    function LostFileCheck(bytes32 ID) internal view returns(bool){
-        bool res = false;
-        if(!OperationAfterUpload(ID, State.deleteRequested)){
-            //TODO Compensate();
-            res = true;
+    function LostFileCheck(bytes32 ID) internal returns(bool){
+        bool lostFile = !OperationAfterUpload(ID, State.deleteRequested);
+        if(lostFile){
+            currentSLA.credits = currentSLA.credits + violationCredits[Violation.lostFile];
         }
-        return(res);    
+        return(lostFile);    
     }
     
-    function CorruptedFileCheckRequest(string calldata filepath) external FileInBC(filepath){
+    function FileHashRequest(string calldata filepath) external OnlyUser IsSLAValid FileInBC(filepath){
         bytes32 i = Hash(filepath);
-        FileDigestOracle(oracle).DigestRequest(files[i].url);  
+        FileDigestOracle(oracle).DigestRequest(files[i].url);
+        if(files[i].states[files[i].states.length - 1] != State.checkRequested)  
+            files[i].states.push(State.checkRequested);
     }
 
-    function CorruptedFileCheck(string calldata filepath) external FileInBC(filepath){
+    function FileCheck(string calldata filepath) external OnlyUser IsSLAValid FileInBC(filepath) FileState(filepath, State.checkRequested){
         bytes32 i = Hash(filepath);
-        bool res = (files[i].digests[files[i].digests.length - 1] == FileDigestOracle(oracle).DigestRetrieve(files[i].url));  
-        emit CorruptedFileChecked(msg.sender, filepath, res);
-    }
-    
-    /*
-    function UndeletedFileCheck(string calldata filepath) external returns(bool){
-        bytes32 i = Hash(filepath);
-        bool res = false;
-        if(OperationAfterUpload(i, "deleted")){
-            //TODO Compensate();
-            res = true;
+        bool intactOnCloud = (files[i].digests[files[i].digests.length - 1] == FileDigestOracle(oracle).DigestRetrieve(files[i].url)); 
+        string memory res = "No SLA violations.";
+        
+        if(!files[i].onCloud && intactOnCloud) {
+            res = "Cloud should have deleted the file but it did not.";
+            currentSLA.credits = currentSLA.credits + violationCredits[Violation.undeletedFile];
+        }else if (files[i].onCloud && !intactOnCloud){
+            res = "File has been corrupted.";
+           currentSLA.credits = currentSLA.credits + violationCredits[Violation.lostFile];
         }
-        return(res);   
-    }*/
+        //restore previous state
+        files[i].states.push(files[i].states[files[i].states.length - 2]);
+        emit FileChecked(msg.sender, filepath, res);
+    }
     
     //check if there is an operation after last upload
     function OperationAfterUpload(bytes32 ID, State operation) internal view returns(bool){
@@ -203,6 +264,14 @@ contract CloudSLA {
         return(operationFound && operationTime > uploadedTime);
     }
     
+    function GetFile(string memory filepath) public view FileInBC(filepath) returns(bytes32, State [] memory, bool, bytes32 [] memory, string memory){
+        bytes32 i = Hash(filepath);
+        return (files[i].ID, files[i].states, files[i].onCloud, files[i].digests, files[i].url);
+    }
+    
+    function GetSLAInfo() public view returns(bool, uint, uint, uint){
+        return (currentSLA.paid, currentSLA.validityPeriod.startTime, currentSLA.validityPeriod.endTime, currentSLA.credits);
+    }
 }
 
 interface FileDigestOracle {
