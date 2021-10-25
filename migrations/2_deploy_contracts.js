@@ -1,4 +1,4 @@
-var CloudSLA = artifacts.require("CloudSLA");
+var Factory = artifacts.require("Factory");
 
 module.exports = function(deployer) {
   //constructor (address _user, uint _price, uint _validityDuration, uint lostFileCredits, uint undeletedFileCredits)
@@ -7,5 +7,6 @@ module.exports = function(deployer) {
   let monthlyValidityDuration = 30 * 24 * 60 * 60; //1 month in seconds
   let testValidityDuration = 5 * 60; //5 minutes in seconds
 
-  deployer.deploy(CloudSLA, user, String(price), String(testValidityDuration), 1, 1);
+  //deployer.deploy(CloudSLA, user, String(price), String(testValidityDuration), 1, 1);
+  deployer.deploy(Factory);
 };

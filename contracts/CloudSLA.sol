@@ -2,10 +2,30 @@
 pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-/**
- * @title CloudSLA
- * @dev 
- */
+contract Factory{
+    mapping ( address => address ) private children; //from user to contract
+    address private cloud;
+
+    modifier OnlyCloud {require (msg.sender == cloud, "OnlyCloud"); _;}
+    modifier Exists (address user) { require (children[user] != address(0), "Exists"); _;}
+
+    event ChildCreated(address childAddress, address _user);
+
+    constructor(){
+        cloud = msg.sender;
+    }
+
+    function createChild(address _user, uint _price, uint _validityDuration, uint lostFileCredits, uint undeletedFileCredits) external OnlyCloud{
+       CloudSLA child = new CloudSLA(msg.sender, _user, _price,  _validityDuration, lostFileCredits, undeletedFileCredits);
+       children[_user] = address(child);
+       emit ChildCreated(address(child), _user);
+    }
+
+    function getSmartContractAddress(address user) external view Exists(user) returns(address){
+        return children[user];
+    }
+}
+
 contract CloudSLA {
     address private oracle = 0x9e699d6c7ccf183F0B09675A9E867d1486EEF85b;
     address private user;
@@ -111,8 +131,8 @@ contract CloudSLA {
     event ReadRequestDenied(address indexed _from, string filepath, bool lostFile);
     event FileChecked(address indexed _from, string filepath, string msg);
 
-    constructor (address _user, uint _price, uint _validityDuration, uint lostFileCredits, uint undeletedFileCredits) {
-        cloud = msg.sender;
+    constructor (address _cloud, address _user, uint _price, uint _validityDuration, uint lostFileCredits, uint undeletedFileCredits) {
+        cloud = _cloud;
         user = _user;
         price = _price;
         validityDuration = _validityDuration;
