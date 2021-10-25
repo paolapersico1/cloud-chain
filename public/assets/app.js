@@ -102,7 +102,7 @@ App = {
             var FileDigestOracleArtifact = data;
             web3OracleContractInstance = new web3WebSocket.eth.Contract(
               FileDigestOracleArtifact.abi,
-              "0x9e699d6c7ccf183F0B09675A9E867d1486EEF85b",
+              "0x59E4fD714b73B733cD8d1c66f82238e087257C29",
             );
             return App.listenEvents();
           });
@@ -210,7 +210,7 @@ App = {
           console.log("--Digest Computed Received--");
           let filepath = getPath(evt.returnValues.url);
 
-          truffleContractInstance.FileCheck(filepath, {from: App.account})
+          myTruffleContractInstance.FileCheck(filepath, {from: App.account})
           .then(function(txReceipt) {
             console.log("--CorruptedFileCheck--");
             console.log(txReceipt);
@@ -439,8 +439,9 @@ function retrieveMyContracts(account, provider){
   return new Promise((resolve, reject) => {
     $.getJSON('/build/contracts/CloudSLA.json', function(data) {
       var CloudSLAArtifact = data;
-      truffleContractInstance.getSmartContractAddress.call(account)
-      .then(function(address) {
+      var address = sessionStorage.getItem("scAddress");
+      if(address){
+        console.log("SC address is in session storage.")
         var myTruffleContract = TruffleContract(CloudSLAArtifact);
         myTruffleContract.setProvider(provider);
         myTruffleContract.at(address)
@@ -456,9 +457,29 @@ function retrieveMyContracts(account, provider){
 
           resolve(result);
         })
-      }).catch(function(err) {
-          reject(err);
-      });
+      }else{
+        truffleContractInstance.getSmartContractAddress.call(account)
+        .then(function(address) {
+          sessionStorage.setItem("scAddress", address);
+          var myTruffleContract = TruffleContract(CloudSLAArtifact);
+          myTruffleContract.setProvider(provider);
+          myTruffleContract.at(address)
+          .then(function(truffleContractInstance) {
+            let web3ContractInstance = new web3.eth.Contract(
+                CloudSLAArtifact.abi,
+                address,
+            );
+
+            let result = new Object();
+            result['truffleContract'] = truffleContractInstance;
+            result['web3Contract'] = web3ContractInstance;
+
+            resolve(result);
+          })
+        }).catch(function(err) {
+            reject(err);
+        });
+      }
     })
   });
 }

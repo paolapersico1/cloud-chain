@@ -118,6 +118,7 @@ app.use(busboy());
 app.use(express.urlencoded({ extended: true }))
 
 var accounts = {"auth0|615afaf5c69eb200704af4b8" : "0x627306090abaB3A6e1400e9345bC60c78a8BEf57"}
+var truffleContracts = {}
 
 //Initialize CloudSLA interaction 
 const provider = truffleConfig.networks.quickstartWallet.provider();
@@ -126,7 +127,7 @@ console.log("Cloud address: " + account);
 
 const price = 5 * (10**18); //5 ether in wei
 const monthlyValidityDuration = 30 * 24 * 60 * 60; //1 month in seconds
-const testValidityDuration = 5 * 60; //5 minutes in seconds
+const testValidityDuration = 60 * 60; //1 hour in seconds
 
 var truffleContract = TruffleContract(FactoryArtifact);
 truffleContract.setProvider(provider);
@@ -156,7 +157,13 @@ truffleContract.deployed().then(function(instance) {
 	web3ContractInstance.events.ChildCreated({})
 	    .on('data', async function(event){
         let scAddress = event.returnValues.childAddress;
-        attachEventListeners(scAddress);
+        let userAddress = event.returnValues._user;
+        generateTruffleInstance(scAddress, userAddress)
+        .then(truffleInstance => {
+        	truffleContracts[userAddress] = truffleInstance;
+        	attachEventListeners(scAddress, userAddress);
+        })
+        .catch(err => {console.log(err);});    
     })
 	  .on('error', console.error);
 
@@ -164,127 +171,118 @@ truffleContract.deployed().then(function(instance) {
   console.log(err.message);
 });
 
-function attachEventListeners(scAddress){
-	const web3ContractInstance = new web3.eth.Contract(
+function attachEventListeners(scAddress, userAddress){
+	const userWeb3ContractInstance = new web3.eth.Contract(
 	    CloudSLAArtifact.abi,
 	    scAddress,
 	);
 
-	var myTruffleContract = TruffleContract(CloudSLAArtifact);
-	myTruffleContract.setProvider(provider);
-
-	myTruffleContract.at(scAddress)
-	.then(function(myContractInstance) {
-		web3ContractInstance.events.Paid({})
-	    .on('data', async function(event){
-	        console.log("--SC Activated--");
-	        let user = event.returnValues._from;
-	        let endTime = parseInt(event.returnValues.endTime) + 1;
-	        const date = new Date(endTime * 1000);
-	        const job = schedule.scheduleJob(date, function(){
-					  myContractInstance.EndSla({from: account})
-			      .then(function(txReceipt) {
-			      	console.log("--SLA ended--");
-				      //console.log(txReceipt);
-				    }).catch(function(err) {
-						  console.log(err.message);
-						});
-					});
-	    })
-		  .on('error', console.error);
-
-		web3ContractInstance.events.UploadRequested({})
-	    .on('data', async function(event){
-	        console.log("--Upload Request Received--");
-	        let file = event.returnValues.filepath;
-	        
-	        myContractInstance.UploadRequestAck(file, {from: account})
-	        .then(function(txReceipt) {
-	        	console.log("--UploadRequestAck--");
-			      console.log(txReceipt);
-
+	let userTruffleContractInstance = truffleContracts[userAddress];
+	userWeb3ContractInstance.events.Paid({})
+    .on('data', async function(event){
+        console.log("--SC Activated--");
+        let user = event.returnValues._from;
+        let endTime = parseInt(event.returnValues.endTime) + 1;
+        const date = new Date(endTime * 1000);
+        const job = schedule.scheduleJob(date, function(){
+				  userTruffleContractInstance.EndSla({from: account})
+		      .then(function(txReceipt) {
+		      	console.log("--SLA ended--");
+			      //console.log(txReceipt);
 			    }).catch(function(err) {
 					  console.log(err.message);
 					});
-	    })
-		  .on('error', console.error);
+				});
+    })
+	  .on('error', console.error);
 
-	 web3ContractInstance.events.DeleteRequested({})
-	  .on('data', async function(event){
-	      console.log("--Delete Request Received--");
-	      let file = event.returnValues.filepath;
-	      let user = event.returnValues._from;
-	      let filepath = hidePath(file, user, false);
-	      deleteFile(filepath);
-	      
-	      myContractInstance.Delete(file, {from: account})
-	      .then(function(txReceipt) {
-	      	console.log("--Delete--");
+	userWeb3ContractInstance.events.UploadRequested({})
+    .on('data', async function(event){
+        console.log("--Upload Request Received--");
+        let file = event.returnValues.filepath;
+        
+        userTruffleContractInstance.UploadRequestAck(file, {from: account})
+        .then(function(txReceipt) {
+        	console.log("--UploadRequestAck--");
 		      console.log(txReceipt);
 
 		    }).catch(function(err) {
 				  console.log(err.message);
 				});
-	  })
+    })
 	  .on('error', console.error);
 
-	web3ContractInstance.events.ReadRequested({})
-	  .on('data', async function(event){    
-	  		console.log("--Read Request Received--");
-	      let file = event.returnValues.filepath;
-	      let user = event.returnValues._from;
-	      let filepath = hidePath(file, user, false);
+ userWeb3ContractInstance.events.DeleteRequested({})
+  .on('data', async function(event){
+      console.log("--Delete Request Received--");
+      let file = event.returnValues.filepath;
+      let user = event.returnValues._from;
+      let filepath = hidePath(file, user, false);
+      deleteFile(filepath);
+      
+      userTruffleContractInstance.Delete(file, {from: account})
+      .then(function(txReceipt) {
+      	console.log("--Delete--");
+	      console.log(txReceipt);
 
-	      let fileExists = new Promise((resolve, reject) => {
-				// check if file exists
-				fs.stat(relative(filepath), (err, stats) => {
-					if (err) {
-						return reject(err);
-					}
-					return resolve(stats);
-				});
+	    }).catch(function(err) {
+			  console.log(err.message);
 			});
+  })
+  .on('error', console.error);
 
-			fileExists.then((stats) => {
-				let url = hostname + ":" + port + "/" + filepath;
-				url = url.replace("\\", "/");
-				myContractInstance.ReadRequestAck(file, url, {from: account})
-		        .then(function(txReceipt) {
-		        	console.log("--ReadRequestAck--");
-				      console.log(txReceipt);
-			    }).catch(function(err) {
-					  console.log(err.message);
-				});
-			}).catch((err) => {
-				myContractInstance.ReadRequestDeny(file, {from: account})
-		        .then(function(txReceipt) {
-		        	console.log("--ReadRequestDeny--");
-				      console.log(txReceipt);
-			    }).catch(function(err) {
-					  console.log(err.message);
-				});
+	userWeb3ContractInstance.events.ReadRequested({})
+  .on('data', async function(event){    
+  		console.log("--Read Request Received--");
+      let file = event.returnValues.filepath;
+      let user = event.returnValues._from;
+      let filepath = hidePath(file, user, false);
+
+      let fileExists = new Promise((resolve, reject) => {
+			// check if file exists
+			fs.stat(relative(filepath), (err, stats) => {
+				if (err) {
+					return reject(err);
+				}
+				return resolve(stats);
 			});
-	  })
-	  .on('error', console.error);
-  }).catch(function(err) {
-	  console.log(err.message);
-	});	
+		});
+
+		fileExists.then((stats) => {
+			let url = hostname + ":" + port + "/" + filepath;
+			url = url.replace("\\", "/");
+			userTruffleContractInstance.ReadRequestAck(file, url, {from: account})
+	        .then(function(txReceipt) {
+	        	console.log("--ReadRequestAck--");
+			      console.log(txReceipt);
+		    }).catch(function(err) {
+				  console.log(err.message);
+			});
+		}).catch((err) => {
+			userTruffleContractInstance.ReadRequestDeny(file, {from: account})
+	        .then(function(txReceipt) {
+	        	console.log("--ReadRequestDeny--");
+			      console.log(txReceipt);
+		    }).catch(function(err) {
+				  console.log(err.message);
+			});
+		});
+  })
+  .on('error', console.error);
 }
 
-function retrieveMyContract(account){
+function generateTruffleInstance(scAddress, userAddress){
 	return new Promise((resolve, reject) => {
-		truffleContractInstance.getSmartContractAddress.call(account)
-	    .then(function(address) {
-	    	var myTruffleContract = TruffleContract(CloudSLAArtifact);
-				myTruffleContract.setProvider(provider);
-				myTruffleContract.at(address)
-				.then(function(myContractInstance) {
-					resolve(myContractInstance);
-				})
-		  }).catch(function(err) {
-				  console.log(err.message);
-				  reject(err);
-			});
+		var myTruffleContract = TruffleContract(CloudSLAArtifact);
+			myTruffleContract.setProvider(provider);
+			myTruffleContract.at(scAddress)
+			.then(function(userTruffleContractInstance) {
+				truffleContracts[userAddress] = userTruffleContractInstance;
+				resolve(userTruffleContractInstance);
+			})
+			.catch(function(error){
+				reject("No SC found.")
+			})
 	});
 }
 
@@ -405,8 +403,8 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 		}
 		else{
 			let fileCanBeUploaded = new Promise((resolve, reject) => {
-				retrieveMyContract(userAccount)
-        .then(truffleContractInstance => {
+				if(truffleContracts.hasOwnProperty(userAccount)){
+					let truffleContractInstance = truffleContracts[userAccount]
 					let url = req.path.slice(1, req.path.indexOf("@upload"));
 					let filepath = url + saveas;
 					truffleContractInstance.GetFile.call(filepath)
@@ -415,10 +413,9 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 				      }).catch(function(err) {
 							  return reject("File can't be uploaded as it is not in the Blockchain.");
 							});
-				})
-				.catch(err => {
+				}else{
 					return reject("Server contract error.");
-				})
+				}
 			});
 
 			let fileNotExist = new Promise((resolve, reject) => {
@@ -441,8 +438,8 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 							let url = req.path.slice(1, req.path.indexOf("@upload"));
 							let filepath = url + saveas;
 
-							retrieveMyContract(userAccount)
-        			.then(truffleContractInstance => {
+							if(truffleContracts.hasOwnProperty(userAccount)){
+								let truffleContractInstance = truffleContracts[userAccount]
 								truffleContractInstance.UploadTransferAck(filepath, hash, {from: account})
 				        .then(function(txReceipt) {
 				        	console.log("--UploadTransferAck--");
@@ -450,8 +447,9 @@ app.post("/*@upload", requiresAuth(), (req, res) => {
 						    }).catch(function(err) {
 								  console.log(err.message);
 								});
-							})
-							.catch(function(error){console.log(error);});
+							}else{
+								throw "No SC found.";
+							}
 						})
 						.catch(function(error){console.log(error);});
 					if (res.headersSent) {
