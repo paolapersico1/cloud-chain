@@ -75,6 +75,13 @@ contract CloudSLA {
         require (i != 0x0 && files[i].ID != 0x0, "FileInBC");
         _;
     }
+    
+    modifier UrlPublished(string memory filepath) {
+        bytes32 i = Hash(filepath);
+        require (i != 0x0 && files[i].ID != 0x0 && bytes(files[i].url).length != 0 , "UrlPublished");
+        _;
+    }
+    
     modifier FileOnCloud (string memory filepath, bool onCloud) {
         bytes32 i = Hash(filepath);
         bool inBC = files[i].ID != 0x0;
@@ -237,7 +244,7 @@ contract CloudSLA {
         return(lostFile);    
     }
     
-    function FileHashRequest(string calldata filepath) external OnlyUser IsSLAValid FileInBC(filepath){
+    function FileHashRequest(string calldata filepath) external OnlyUser IsSLAValid UrlPublished(filepath){
         bytes32 i = Hash(filepath);
         FileDigestOracle(oracle).DigestRequest(files[i].url);
         if(files[i].states[files[i].states.length - 1] != State.checkRequested)  
@@ -296,5 +303,6 @@ contract CloudSLA {
 
 interface FileDigestOracle {
     function DigestRequest(string calldata url) external;
+    function DigestStore(string calldata url, bytes32 digest) external;
     function DigestRetrieve(string calldata url) external view returns(bytes32);
 }
