@@ -4,8 +4,8 @@ const Web3 = require('Web3');
 const wsProvider = new Web3.providers.WebsocketProvider("ws://localhost:8546");
 HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider);
 
-// insert the private key of the account used in metamask eg: Account 12
-// address 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
+// insert the private key of the accounts
+// address of account 0 (12 in metamask) : 0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73
 dotenv.config();
 const privateKeys = ["0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",
                       "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3",
@@ -25,6 +25,7 @@ module.exports = {
       provider: () => new HDWalletProvider(privateKeys, wsProvider, 0, 3),
       network_id: "*",
       gasPrice: 0,
+      type: "quorum",
       websockets: true
     }
   },

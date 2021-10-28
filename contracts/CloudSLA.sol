@@ -27,7 +27,7 @@ contract Factory{
 }
 
 contract CloudSLA {
-    address private oracle = 0x59E4fD714b73B733cD8d1c66f82238e087257C29;
+    address private oracle = 0xc0ED63E3A70BfCB003452B1Cc083db822e1f23e1;
     address private user;
     address private cloud;
     
@@ -69,43 +69,33 @@ contract CloudSLA {
     modifier OnlyUser {require (msg.sender == user, "OnlyUser"); _;}
     modifier OnlyCloud {require (msg.sender == cloud, "OnlyCloud"); _;}
     modifier OnlyUserOrCloud{ require ((msg.sender == user || msg.sender == cloud), "OnlyUserOrCloud");  _;}
-    
-    modifier FileInBC (string memory filepath) {
-        bytes32 i = Hash(filepath);
-        require (i != 0x0 && files[i].ID != 0x0, "FileInBC");
-        _;
+
+    function FileInBC(bytes32 i) public view returns(bool res) {
+        return (i != 0x0 && files[i].ID != 0x0);
     }
-    
-    modifier UrlPublished(string memory filepath) {
-        bytes32 i = Hash(filepath);
-        require (i != 0x0 && files[i].ID != 0x0 && bytes(files[i].url).length != 0 , "UrlPublished");
-        _;
+
+    function UrlPublished(bytes32 i) public view returns(bool res) {
+        return (i != 0x0 && files[i].ID != 0x0 && bytes(files[i].url).length != 0);
     }
-    
-    modifier FileOnCloud (string memory filepath, bool onCloud) {
-        bytes32 i = Hash(filepath);
+
+    function FileOnCloud(bytes32 i, bool onCloud) public view returns(bool res) {
         bool inBC = files[i].ID != 0x0;
-        if (onCloud){
-            require (i != 0x0 && inBC && files[i].onCloud, "FileOnCloud");
-        }
+        if (onCloud)
+            return (i != 0x0 && inBC && files[i].onCloud);
         else
-            require (! inBC ||  ! files[i].onCloud, "FileNotOnCloud");
-        _;
+            return (! inBC ||  ! files[i].onCloud);
     }
+    
 
-    modifier NotBeingChecked(string memory filepath) {
-        bytes32 i = Hash(filepath);
+    function NotBeingChecked(bytes32 i) public view returns(bool res) {
         bool inBC = files[i].ID != 0x0;
-        require (!inBC || (files[i].states[files[i].states.length - 1] != State.checkRequested));
-        _;
+        return (!inBC || (files[i].states[files[i].states.length - 1] != State.checkRequested));
     }
 
-    modifier FileState (string memory filepath, State prevState) {
-        bytes32 i = Hash(filepath);
+    function FileState(bytes32 i, State prevState) public view returns(bool res) {
         bool inBC = files[i].ID != 0x0;
         State lastState = files[i].states[files[i].states.length - 1];
-        require (i != 0x0 && inBC && lastState == prevState, "FileState");
-        _;
+        return (i != 0x0 && inBC && lastState == prevState);
     }
     
     modifier IsSLAValid(){
@@ -125,7 +115,7 @@ contract CloudSLA {
         _;
     }
     
-    event Paid(address indexed _from, uint endTime, uint depositedValue);
+    event Paid(address indexed _from, uint endTime);
     event CompensatedUser(address indexed _user, uint value);
     event PaidCloudProvider(address indexed _cloud, uint value);
     event UploadRequested(address indexed _from, string filepath);
@@ -151,7 +141,7 @@ contract CloudSLA {
         currentSLA.paid = true;
         currentSLA.validityPeriod.startTime = block.timestamp;
         currentSLA.validityPeriod.endTime =  block.timestamp + validityDuration;
-        emit Paid(msg.sender, currentSLA.validityPeriod.endTime, msg.value);
+        emit Paid(msg.sender, currentSLA.validityPeriod.endTime);
     }
     
     function EndSla() external OnlyUserOrCloud ValidityPeriodEnded {
@@ -172,28 +162,32 @@ contract CloudSLA {
         emit PaidCloudProvider(cloud, value);
     }
     
-    function UploadRequest(string calldata filepath) external OnlyUser IsSLAValid FileOnCloud(filepath, false) NotBeingChecked(filepath){
+    function UploadRequest(string calldata filepath) external OnlyUser IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileOnCloud(i, false) && NotBeingChecked(i));
         files[i].ID = i;
         files[i].states.push(State.uploadRequested);
         emit UploadRequested(msg.sender, filepath);
     }
     
-    function UploadRequestAck(string calldata filepath) external OnlyCloud IsSLAValid FileState(filepath, State.uploadRequested){
+    function UploadRequestAck(string calldata filepath) external OnlyCloud IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileState(i, State.uploadRequested));
         files[i].states.push(State.uploadRequestAck);
         emit UploadRequestAcked(msg.sender, filepath);
     }
     
-    function UploadTransferAck(string calldata filepath, bytes32 digest) external OnlyCloud IsSLAValid FileState(filepath, State.uploadRequestAck){
+    function UploadTransferAck(string calldata filepath, bytes32 digest) external OnlyCloud IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileState(i, State.uploadRequestAck));
         files[i].states.push(State.uploadTransferAck);
         files[i].digests.push(digest);
         emit UploadTransferAcked(msg.sender, filepath, digest);
     }
     
-    function UploadConfirm(string calldata filepath, bool ack) external OnlyUser IsSLAValid FileState(filepath, State.uploadTransferAck){
+    function UploadConfirm(string calldata filepath, bool ack) external OnlyUser IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileState(i, State.uploadTransferAck));
         if(ack){
             files[i].states.push(State.uploaded); 
             files[i].onCloud = true;
@@ -204,34 +198,39 @@ contract CloudSLA {
         }
     }
     
-    function DeleteRequest(string calldata filepath) external OnlyUser IsSLAValid FileOnCloud(filepath, true) NotBeingChecked(filepath){
+    function DeleteRequest(string calldata filepath) external OnlyUser IsSLAValid {
         bytes32 i = Hash(filepath);
+        require(FileOnCloud(i, true) && NotBeingChecked(i));
         files[i].states.push(State.deleteRequested);
         emit DeleteRequested(msg.sender, filepath);
     }
     
-    function Delete(string calldata filepath) external OnlyCloud IsSLAValid FileState(filepath, State.deleteRequested){
+    function Delete(string calldata filepath) external OnlyCloud IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileState(i, State.deleteRequested));
         files[i].states.push(State.deleted);
         files[i].onCloud = false;
         emit Deleted(msg.sender, filepath);
     }
     
-    function ReadRequest(string calldata filepath) external OnlyUser IsSLAValid FileOnCloud(filepath, true) NotBeingChecked(filepath){
+    function ReadRequest(string calldata filepath) external OnlyUser IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileOnCloud(i, true) && NotBeingChecked(i));
         files[i].states.push(State.readRequested);
         emit ReadRequested(msg.sender, filepath);
     }
     
-    function ReadRequestAck(string calldata filepath, string calldata url) external OnlyCloud IsSLAValid FileState(filepath, State.readRequested){
+    function ReadRequestAck(string calldata filepath, string calldata url) external OnlyCloud IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileState(i, State.readRequested));
         files[i].states.push(State.readRequestAck);
         files[i].url = url;
         emit ReadRequestAcked(msg.sender, filepath, url);
     }
     
-    function ReadRequestDeny(string calldata filepath) external OnlyCloud IsSLAValid FileState(filepath, State.readRequested){
+    function ReadRequestDeny(string calldata filepath) external OnlyCloud IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileState(i, State.readRequested));
         files[i].states.push(State.readDeny);
         emit ReadRequestDenied(msg.sender, filepath, LostFileCheck(i));
     }
@@ -244,15 +243,17 @@ contract CloudSLA {
         return(lostFile);    
     }
     
-    function FileHashRequest(string calldata filepath) external OnlyUser IsSLAValid UrlPublished(filepath){
+    function FileHashRequest(string calldata filepath) external OnlyUser IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(UrlPublished(i));
         FileDigestOracle(oracle).DigestRequest(files[i].url);
         if(files[i].states[files[i].states.length - 1] != State.checkRequested)  
             files[i].states.push(State.checkRequested);
     }
 
-    function FileCheck(string calldata filepath) external OnlyUser IsSLAValid FileInBC(filepath) FileState(filepath, State.checkRequested){
+    function FileCheck(string calldata filepath) external OnlyUser IsSLAValid{
         bytes32 i = Hash(filepath);
+        require(FileInBC(i) && FileState(i, State.checkRequested));
         bool intactOnCloud = (files[i].digests[files[i].digests.length - 1] == FileDigestOracle(oracle).DigestRetrieve(files[i].url)); 
         string memory res = "No SLA violations.";
         
@@ -291,8 +292,9 @@ contract CloudSLA {
         return(operationFound && operationTime > uploadedTime);
     }
     
-    function GetFile(string memory filepath) public view FileInBC(filepath) returns(bytes32, State [] memory, bool, bytes32 [] memory, string memory){
+    function GetFile(string memory filepath) public view returns(bytes32, State [] memory, bool, bytes32 [] memory, string memory){
         bytes32 i = Hash(filepath);
+        require(FileInBC(i));
         return (files[i].ID, files[i].states, files[i].onCloud, files[i].digests, files[i].url);
     }
     
