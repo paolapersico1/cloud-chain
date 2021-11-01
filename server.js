@@ -126,8 +126,10 @@ const account = provider.getAddress(); // 0xFE3B557E8Fb62b89F4916B721be55cEb828d
 console.log("Cloud address: " + account);
 
 const price = 5 * (10**18); //5 ether in wei
+const lostFileCredits = 1 * (10**18); //1 ether in wei
+const undeletedFileCredits = 2 * (10**18); //2 ether in wei
 const monthlyValidityDuration = 30 * 24 * 60 * 60; //1 month in seconds
-const testValidityDuration = 60 * 60; //1 hour in seconds
+const testValidityDuration = 5 * 60; //5 minutes in seconds
 
 var truffleContract = TruffleContract(FactoryArtifact);
 truffleContract.setProvider(provider);
@@ -146,7 +148,8 @@ truffleContract.deployed().then(function(instance) {
 	);
 
 	let user = '0x627306090abaB3A6e1400e9345bC60c78a8BEf57';
-	truffleContractInstance.createChild(user, String(price), String(testValidityDuration), 1, 1, {from: account})
+	truffleContractInstance.createChild(user, String(price), String(testValidityDuration), 
+																			String(lostFileCredits), String(undeletedFileCredits), {from: account})
       .then(function(txReceipt) {
       	console.log("--SC Created--");
 	      //console.log(txReceipt);

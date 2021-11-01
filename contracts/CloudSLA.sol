@@ -125,8 +125,8 @@ contract CloudSLA {
     event Deleted(address indexed _from, string filepath);
     event ReadRequested(address indexed _from, string filepath);
     event ReadRequestAcked(address indexed _from, string filepath, string url);
-    event ReadRequestDenied(address indexed _from, string filepath, bool lostFile);
-    event FileChecked(address indexed _from, string filepath, string msg);
+    event ReadRequestDenied(address indexed _from, string filepath, bool lostFile, uint credits);
+    event FileChecked(address indexed _from, string filepath, string msg, uint credits);
 
     constructor (address _cloud, address _user, uint _price, uint _validityDuration, uint lostFileCredits, uint undeletedFileCredits) {
         cloud = _cloud;
@@ -232,7 +232,7 @@ contract CloudSLA {
         bytes32 i = Hash(filepath);
         require(FileState(i, State.readRequested));
         files[i].states.push(State.readDeny);
-        emit ReadRequestDenied(msg.sender, filepath, LostFileCheck(i));
+        emit ReadRequestDenied(msg.sender, filepath, LostFileCheck(i), currentSLA.credits);
     }
     
     function LostFileCheck(bytes32 ID) internal returns(bool){
@@ -266,7 +266,7 @@ contract CloudSLA {
         }
         //restore previous state
         files[i].states.push(files[i].states[files[i].states.length - 2]);
-        emit FileChecked(msg.sender, filepath, res);
+        emit FileChecked(msg.sender, filepath, res, currentSLA.credits);
     }
     
     //check if there is an operation after last upload

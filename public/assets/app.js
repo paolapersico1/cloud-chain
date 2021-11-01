@@ -1,4 +1,5 @@
 App = {
+  test: true,
   web3Provider: null,
   contracts: {},
   account: null,
@@ -91,9 +92,9 @@ App = {
                 });
             }else{
               $('#credits').empty();
-              $('#credits').append("Credits: " + res[3]); 
+              $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether') + " ether");
               $('#endDate').empty();
-              $('#endDate').append("Valid until: " + new Date(res[2]*1000).toLocaleString('en-GB')); 
+              $('#endDate').append("<b>Valid until:</b> " + new Date(res[2]*1000).toLocaleString('en-GB')); 
             }
           }).catch(function(err) {
             console.log(err.message);
@@ -120,7 +121,7 @@ App = {
         localStorage.removeItem('warning_msg_local');
         updateAlerts();
         $('#credits').empty();
-        $('#credits').append("<b>Credits:</b> 0 wei"); 
+        $('#credits').append("<b>Credits:</b> 0 ether"); 
         $('#endDate').empty();
         $('#endDate').append("<b>Valid until:</b> " + new Date(evt.returnValues.endTime*1000).toLocaleString('en-GB'));
       })
@@ -130,7 +131,7 @@ App = {
       .on('data', async function(evt){
         let value = evt.returnValues.value;
 
-        localStorage.setItem('warning_msg_local', "Your account was compensated " + value + " wei for SLA violations.");
+        localStorage.setItem('warning_msg_local', "Your account was compensated " + web3.utils.fromWei(value, 'ether') + " ether for SLA violations.");
         updateAlerts();
 
         App.updateCredits();
@@ -185,7 +186,7 @@ App = {
           if(lostFile){
             localStorage.setItem('warning_msg_local', "'" + file.replace("mycloud/", "") + "' has been lost.");
             updateAlerts();
-            App.updateCredits();
+            App.updateCredits(evt.returnValues.credits);
           }else{
             localStorage.setItem('warning_msg_local', "Client previously requested '" + file.replace("mycloud/", "") + "' deletion");
             updateAlerts();
@@ -200,7 +201,7 @@ App = {
           let filepath = evt.returnValues.filepath;
           localStorage.setItem('warning_msg_local', msg);
           updateAlerts();
-          App.updateCredits();
+          App.updateCredits(evt.returnValues.credits);
           $("#filecheck").attr('disabled', false);
       })
       .on('error', console.error);
@@ -238,14 +239,19 @@ App = {
     $(document).one('submit', "form[action='@check']", App.sendReadRequest);
   },
 
-  updateCredits: function(){
-    myTruffleContractInstance.GetSLAInfo.call()
+  updateCredits: function(credits=null){
+    if(credits === null){
+      myTruffleContractInstance.GetSLAInfo.call()
       .then(function (res) { 
         $('#credits').empty();
-        $('#credits').append("<b>Credits:</b> " + res[3] + " wei"); 
+        $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether') + " ether"); 
       }).catch(function(err) {
         console.log(err.message);
       });
+    }else{
+      $('#credits').empty();
+      $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(credits, 'ether') + " ether"); 
+    }   
   },
 
   search: function(e){
@@ -440,13 +446,13 @@ function retrieveMyContracts(account, provider){
     $.getJSON('/build/contracts/CloudSLA.json', function(data) {
       var CloudSLAArtifact = data;
       var address = sessionStorage.getItem("scAddress");
-      if(address){
+      if(address && !App.test){
         console.log("SC address is in session storage.")
         var myTruffleContract = TruffleContract(CloudSLAArtifact);
         myTruffleContract.setProvider(provider);
         myTruffleContract.at(address)
         .then(function(truffleContractInstance) {
-          let web3ContractInstance = new web3.eth.Contract(
+          let web3ContractInstance = new web3WebSocket.eth.Contract(
               CloudSLAArtifact.abi,
               address,
           );
@@ -465,7 +471,7 @@ function retrieveMyContracts(account, provider){
           myTruffleContract.setProvider(provider);
           myTruffleContract.at(address)
           .then(function(truffleContractInstance) {
-            let web3ContractInstance = new web3.eth.Contract(
+            let web3ContractInstance = new web3WebSocket.eth.Contract(
                 CloudSLAArtifact.abi,
                 address,
             );
