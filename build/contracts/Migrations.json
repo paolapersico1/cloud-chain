@@ -2305,12 +2305,12 @@
     "1337": {
       "events": {},
       "links": {},
-      "address": "0xd7219CCa20b89Ff9fa28C3939C9b99A2F4952354",
-      "transactionHash": "0x64b30bc795fbe2128c1e885d76f93e0aaaf8c10cf4137a8fe59bdc6d423ba1c5"
+      "address": "0x44DA6D482387c5dd88490F8A0cf9e9A066aC3E6a",
+      "transactionHash": "0x5b651d8844250b01936a7df37a9e5ca149ff60db3bb378506b5c4993bda3f1ae"
     }
   },
   "schemaVersion": "3.4.3",
-  "updatedAt": "2021-11-03T11:39:49.064Z",
+  "updatedAt": "2021-11-03T12:57:17.101Z",
   "networkType": "quorum",
   "devdoc": {
     "kind": "dev",

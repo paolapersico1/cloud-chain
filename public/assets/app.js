@@ -92,7 +92,7 @@ App = {
                 });
             }else{
               $('#credits').empty();
-              $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether').toString() + " ether");
+              $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toString(), 'ether')+ " ether");
               $('#endDate').empty();
               $('#endDate').append("<b>Valid until:</b> " + new Date(res[2]*1000).toLocaleString('en-GB')); 
             }
@@ -100,7 +100,7 @@ App = {
               var FileDigestOracleArtifact = data;
               web3OracleContractInstance = new web3WebSocket.eth.Contract(
                 FileDigestOracleArtifact.abi,
-                "0x59E4fD714b73B733cD8d1c66f82238e087257C29",
+                "0xc0ED63E3A70BfCB003452B1Cc083db822e1f23e1",
               );
               return App.listenEvents();
             });
@@ -244,7 +244,7 @@ App = {
       myTruffleContractInstance.GetSLAInfo.call()
       .then(function (res) { 
         $('#credits').empty();
-        $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether').toString() + " ether"); 
+        $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toString(), 'ether') + " ether"); 
       }).catch(function(err) {
         console.log(err.message);
       });
@@ -362,7 +362,6 @@ App = {
 
   sendUploadRequest: function(e) {
     e.preventDefault();
-    console.log("here");
 
     $("#upload-btn").attr('disabled', true);
 
@@ -484,6 +483,9 @@ function retrieveMyContracts(account, provider){
             resolve(result);
           })
         }).catch(function(err) {
+            window.localStorage.clear();
+            localStorage.setItem('warning_msg_local', "Please accept your smart contract. If this message continues to appear, try reloading the page.");
+            updateAlerts();
             $("#acceptContract").show();
             reject(err);
         });
