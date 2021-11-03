@@ -92,22 +92,22 @@ App = {
                 });
             }else{
               $('#credits').empty();
-              $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether') + " ether");
+              $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether').toString() + " ether");
               $('#endDate').empty();
               $('#endDate').append("<b>Valid until:</b> " + new Date(res[2]*1000).toLocaleString('en-GB')); 
             }
-          }).catch(function(err) {
-            console.log(err.message);
+            $.getJSON('http://localhost:3001/build/contracts/FileDigestOracle.json', function(data) {
+              var FileDigestOracleArtifact = data;
+              web3OracleContractInstance = new web3WebSocket.eth.Contract(
+                FileDigestOracleArtifact.abi,
+                "0x59E4fD714b73B733cD8d1c66f82238e087257C29",
+              );
+              return App.listenEvents();
+            });
           });
-          $.getJSON('http://localhost:3001/build/contracts/FileDigestOracle.json', function(data) {
-            var FileDigestOracleArtifact = data;
-            web3OracleContractInstance = new web3WebSocket.eth.Contract(
-              FileDigestOracleArtifact.abi,
-              "0x59E4fD714b73B733cD8d1c66f82238e087257C29",
-            );
-            return App.listenEvents();
-          });
-        })
+        }).catch(function(err) {
+          console.log("No smart contract found.");
+        });
       })
       .catch(function(err) {
         console.log(err.message);
@@ -244,7 +244,7 @@ App = {
       myTruffleContractInstance.GetSLAInfo.call()
       .then(function (res) { 
         $('#credits').empty();
-        $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether') + " ether"); 
+        $('#credits').append("<b>Credits:</b> " + web3.utils.fromWei(res[3].toNumber(), 'ether').toString() + " ether"); 
       }).catch(function(err) {
         console.log(err.message);
       });
@@ -362,6 +362,7 @@ App = {
 
   sendUploadRequest: function(e) {
     e.preventDefault();
+    console.log("here");
 
     $("#upload-btn").attr('disabled', true);
 
@@ -483,10 +484,11 @@ function retrieveMyContracts(account, provider){
             resolve(result);
           })
         }).catch(function(err) {
+            $("#acceptContract").show();
             reject(err);
         });
       }
-    })
+    }).fail(function() { reject("Error retrieving JSON.") })
   });
 }
 

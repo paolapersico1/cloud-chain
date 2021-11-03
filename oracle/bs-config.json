@@ -1,0 +1,6 @@
+{
+  "server": {
+    "baseDir": ["./public", "./build/contracts"]
+  },
+  "port": 3001
+}

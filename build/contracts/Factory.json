@@ -42580,12 +42580,12 @@
     "1337": {
       "events": {},
       "links": {},
-      "address": "0xC538fd0A079856cE824089c9210AC2dd40C844d8",
-      "transactionHash": "0xfa2ada7539a9e47bd341ec3727d9d2619c58e59b88e5d2aa71b89cf73fb2b5e7"
+      "address": "0x0A6E500F9ba4C4760b2F3E33cA98f6508B5B231a",
+      "transactionHash": "0x13abb89aaa47fffaf55bb04e814d90be4756adfa679d66e288dfd6781539d415"
     }
   },
   "schemaVersion": "3.4.3",
-  "updatedAt": "2021-11-01T20:40:22.095Z",
+  "updatedAt": "2021-11-03T11:39:49.054Z",
   "networkType": "quorum",
   "devdoc": {
     "kind": "dev",

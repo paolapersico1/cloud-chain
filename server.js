@@ -147,16 +147,6 @@ truffleContract.deployed().then(function(instance) {
 	    truffleContractInstance.address,
 	);
 
-	let user = '0x627306090abaB3A6e1400e9345bC60c78a8BEf57';
-	truffleContractInstance.createChild(user, String(price), String(testValidityDuration), 
-																			String(lostFileCredits), String(undeletedFileCredits), {from: account})
-      .then(function(txReceipt) {
-      	console.log("--SC Created--");
-	      //console.log(txReceipt);
-	    }).catch(function(err) {
-			  console.log(err.message);
-			});
-
 	web3ContractInstance.events.ChildCreated({})
 	    .on('data', async function(event){
         let scAddress = event.returnValues.childAddress;
@@ -357,6 +347,21 @@ app.get("/", (req, res) => {
 
 app.get("/build/contracts/*", readFile);
 app.get("/mycloud*", requiresAuth(), readDirOrFile);
+app.get("/@createContract", requiresAuth(), (req, res) => {
+	let user = accounts[req.oidc.user.sub];
+	truffleContractInstance.createChild(user, String(price), String(testValidityDuration), 
+																			String(lostFileCredits), String(undeletedFileCredits), {from: account})
+    .then(function(txReceipt) {
+    	console.log("--SC Created--");
+    	req.flash("success", "Smart contract created.");
+			res.redirect("back");
+      //console.log(txReceipt);
+    }).catch(function(err) {
+		  console.log(err.message);
+		  req.flash("error", "Error creating smart contract.");
+			res.redirect("back");
+		});
+})
 app.get("/*@read", (req, res) => {
 	if (res.stats.error) {
 		res.render("list", flashify(req, {
