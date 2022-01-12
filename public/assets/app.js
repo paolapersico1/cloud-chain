@@ -100,7 +100,7 @@ App = {
               var FileDigestOracleArtifact = data;
               web3OracleContractInstance = new web3WebSocket.eth.Contract(
                 FileDigestOracleArtifact.abi,
-                "0xc0ED63E3A70BfCB003452B1Cc083db822e1f23e1",
+                "0xe663E88aCCb0FA9Fd4Df6d96A42F18b4735c61EC",
               );
               return App.listenEvents();
             });

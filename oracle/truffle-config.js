@@ -2,12 +2,14 @@ const dotenv = require('dotenv');
 const HDWalletProvider = require("truffle-hdwallet-provider");
 const Web3 = require('Web3');
 const wsProvider = new Web3.providers.WebsocketProvider("ws://localhost:8546");
-HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider);
+const httpProvider = new Web3.providers.HttpProvider("http://localhost:8545");
+//HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider);
 
 // insert the private key of the account used in metamask eg: Account 14
 // address 0xf17f52151EbEF6C7334FAD080c5704D77216b732
 dotenv.config();
 const privateKey = process.env.PRIVATE_KEY || "0xae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f";
+const polygonPrivateKey = "0x3433ca32126b43da1cdee8c2fa391aa91f2723107a0443655394061b2c4ba24d";
 
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
@@ -24,6 +26,12 @@ module.exports = {
       network_id: "*",
       gasPrice: 0,
       websockets: true
+    },
+    polygon: {
+      provider: () => new HDWalletProvider(polygonPrivateKey, httpProvider),
+      network_id: "*",
+      type: "quorum",
+      gasPrice: 0
     }
   },
   compilers: {
