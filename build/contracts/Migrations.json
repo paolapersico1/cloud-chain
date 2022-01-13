@@ -12,7 +12,8 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -25,7 +26,8 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -2305,10 +2307,17 @@
       "links": {},
       "address": "0xf38782c565e12348d0710b4157EFfc28f639A5B5",
       "transactionHash": "0x0e5da545e81018e9c834ec9c81c6c63eef60cbfb35863237485d7cac1a97f281"
+    },
+    "1337": {
+      "events": {},
+      "links": {},
+      "address": "0xc7555581De61F6db45EA28547d6D5E0722ED6fBe",
+      "transactionHash": "0x9708b9446031216121a6723e53e93820c1f93cf348000efc701a71def1541928"
     }
   },
   "schemaVersion": "3.4.3",
-  "updatedAt": "2022-01-12T20:05:38.120Z",
+  "updatedAt": "2022-01-13T12:09:33.100Z",
+  "networkType": "quorum",
   "devdoc": {
     "kind": "dev",
     "methods": {},

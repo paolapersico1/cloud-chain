@@ -2,17 +2,16 @@ STEPS TO REPRODUCE THE RESULTS
 
 Hyperledger Besu/GoQuorum:
 1. follow the tutorial at https://consensys.net/quorum/products/guides/getting-started-with-consensys-quorum/ to setup and run the network on Docker
-2. uncomment the "HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider);" line in the truffle-config.js file in /cloud-chain folder
-3. uncomment the same line in the truffle-config.js file in /oracle folder
-4. in the terminal, go to the /oracle folder and execute "npm restart"
-5. take note of the FileDigestOracle contract address
-6. go to the /cloud-chain/contracts folder, open the CloudSLA.sol file and replace the oracle address
-7. (to run the project) 
+2. in the terminal, go to the /oracle folder and execute "npm restart"
+3. take note of the FileDigestOracle contract address
+4. go to the /cloud-chain/contracts folder, open the CloudSLA.sol file and replace the oracle address
+5. (to run the project) 
 	a. go to the /cloud-chain/public/assets folder, open the app.js file and replace the oracle address (web3OracleContractInstance)
 	b. edit the "hosts" file of the o.s. by adding the line "127.0.0.1 cloudchain.com"
 	c. in the terminal, go to the /cloud-chain folder and execute "npm restart" 
-8. (to test the performance) 
-	a. in the terminal, go to the /cloud-chain folder and execute "truffle test --network quickstartWallet"
+6. (to test the performance) 
+	a. go to the /cloud-chain/test folder, open the cloudsla.js file and replace the oracle address
+	b. in the terminal, go to the /cloud-chain folder and execute "truffle test --network quickstartWallet"
 
 Note: to switch between the blockchains:
 	1. remove the container
@@ -32,4 +31,5 @@ Polygon:
 6. take note of the FileDigestOracle contract address
 7. go to the /cloud-chain/contracts folder, open the CloudSLA.sol file and replace the oracle address
 8. (to test the performance) 
-	a. in the terminal, go to the /cloud-chain folder and execute "truffle test --network polygon"
+	a. go to the /cloud-chain/test folder, open the cloudsla.js file and replace the oracle address
+	b. in the terminal, go to the /cloud-chain folder and execute "truffle test --network polygon"

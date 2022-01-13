@@ -27,7 +27,7 @@ contract Factory{
 }
 
 contract CloudSLA {
-    address private oracle = 0xe663E88aCCb0FA9Fd4Df6d96A42F18b4735c61EC;
+    address private oracle = 0xFa5B6432308d45B54A1CE1373513Fab77166436f;
     address private user;
     address private cloud;
     

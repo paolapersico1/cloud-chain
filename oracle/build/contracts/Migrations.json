@@ -2307,11 +2307,17 @@
       "links": {},
       "address": "0x0884c9aE1F93935F75547d29BC86bc092A626719",
       "transactionHash": "0x473ab3e7a4581c65b559843377b725c92d5ba8c439183b320bcd176e829e57ad"
+    },
+    "1337": {
+      "events": {},
+      "links": {},
+      "address": "0xC8c03647d39a96f02f6Ce8999bc22493C290e734",
+      "transactionHash": "0x2d576faba36879faed195febf1b8ef7c142c7cd7a6f3fc6fa1f47983f1a60b55"
     }
   },
   "schemaVersion": "3.4.3",
-  "updatedAt": "2022-01-12T19:04:20.946Z",
-  "networkType": "quorum",
+  "updatedAt": "2022-01-13T11:58:21.474Z",
+  "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",
     "methods": {},

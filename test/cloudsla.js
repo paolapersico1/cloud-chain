@@ -13,7 +13,7 @@ contract("Factory", accounts => {
     await instance.createChild(accounts[1], String(price), String(testValidityDuration), 1, 1, {from: accounts[0]})   
     const scAddress = await instance.getSmartContractAddress(accounts[1], {from: accounts[1]})
     myInstance = await CloudSLA.at(scAddress);
-    oracleInstance = await FileDigestOracle.at("0xe663E88aCCb0FA9Fd4Df6d96A42F18b4735c61EC");
+    oracleInstance = await FileDigestOracle.at("0xFa5B6432308d45B54A1CE1373513Fab77166436f");
     await myInstance.Deposit({from: accounts[1], value: price});
     assert.equal(1, 1);
   });

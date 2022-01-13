@@ -3,7 +3,6 @@ const HDWalletProvider = require("truffle-hdwallet-provider");
 const Web3 = require('Web3');
 const wsProvider = new Web3.providers.WebsocketProvider("ws://localhost:8546");
 const httpProvider = new Web3.providers.HttpProvider("http://localhost:8545");
-//HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider);
 
 // insert the private key of the account used in metamask eg: Account 14
 // address 0xf17f52151EbEF6C7334FAD080c5704D77216b732
@@ -22,7 +21,7 @@ module.exports = {
       gasPrice: 0    
     },
     quickstartWallet: {
-      provider: () => new HDWalletProvider(privateKey, wsProvider),
+      provider: () => {HDWalletProvider.prototype.on = wsProvider.on.bind(wsProvider); return new HDWalletProvider(privateKey, wsProvider)},
       network_id: "*",
       gasPrice: 0,
       websockets: true

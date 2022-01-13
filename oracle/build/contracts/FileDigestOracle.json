@@ -8953,11 +8953,17 @@
       "links": {},
       "address": "0xe663E88aCCb0FA9Fd4Df6d96A42F18b4735c61EC",
       "transactionHash": "0xd456bac8968a24c99982f1171a98feb77fd507f3fb7b004c409e75a58bac3a90"
+    },
+    "1337": {
+      "events": {},
+      "links": {},
+      "address": "0xFa5B6432308d45B54A1CE1373513Fab77166436f",
+      "transactionHash": "0x10b50c3cfe2cce18aa0ed68802dbec0fda95b1b8b5b8856aa2e8dd2f7af90090"
     }
   },
   "schemaVersion": "3.4.3",
-  "updatedAt": "2022-01-12T19:04:20.941Z",
-  "networkType": "quorum",
+  "updatedAt": "2022-01-13T11:58:21.468Z",
+  "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",
     "methods": {},
