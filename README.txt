@@ -27,7 +27,7 @@ Polygon:
 2. take note of the private keys of the nodes (which can be found in the validator.key files in the /test-chain-NUMBER/consensus folders)
 3. in the truffle-config.js file in /cloud-chain folder, replace the private keys (polygonPrivateKeys)
 4. do the same in the truffle-config.js file in /oracle folder
-5. in the terminal, go to the /oracle folder and execute "npm restart"
+5. in the terminal, go to the /oracle folder and execute "truffle migrate --reset --network polygon";
 6. take note of the FileDigestOracle contract address
 7. go to the /cloud-chain/contracts folder, open the CloudSLA.sol file and replace the oracle address
 8. (to test the performance) 
